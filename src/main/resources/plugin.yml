@@ -1,4 +1,4 @@
 name: economy
 version: '${version}'
-main: org.pantouflemc.economy.Bank
+main: org.pantouflemc.economy.Economy
 api-version: '1.20'
