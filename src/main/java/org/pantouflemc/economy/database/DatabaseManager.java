@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import javax.annotation.Nullable;
+
 public class DatabaseManager {
 
     private Connection connection;
@@ -83,9 +85,14 @@ public class DatabaseManager {
         statement.execute("CREATE TABLE IF NOT EXISTS players_accounts ("
                 + "player_uuid VARCHAR(32),"
                 + "account_id INTEGER,"
+                + "main BOOLEAN DEFAULT FALSE,"
                 + "PRIMARY KEY (player_uuid, account_id),"
-                + "FOREIGN KEY (account_id) REFERENCES accounts(id)"
-                + ");");
+                + "FOREIGN KEY (account_id) REFERENCES accounts(id),"
+                + "UNIQUE (player_uuid, account_id)"
+                + ");"
+                + "CREATE UNIQUE INDEX IF NOT EXISTS player_uuid_index"
+                + "ON players_accounts (player_uuid, account_id)"
+                + "WHERE main = TRUE;");
 
         statement.close();
     }
@@ -140,8 +147,27 @@ public class DatabaseManager {
      * @param accountId  the ID of the account
      */
     public void createPlayerAccountRelation(UUID playerUuid, int accountId) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement(
-                "INSERT INTO players_accounts (player_uuid, account_id) VALUES (?, ?);");
+        createPlayerAccountRelation(playerUuid, accountId, false);
+    }
+
+    /**
+     * Create a new player account relation
+     *
+     * @param playerUuid the UUID of the player
+     * @param accountId  the ID of the account
+     * @param main       whether the account is the main account of the player
+     */
+    public void createPlayerAccountRelation(UUID playerUuid, int accountId, boolean main) throws SQLException {
+        PreparedStatement statement;
+
+        if (main) {
+            statement = connection.prepareStatement(
+                    "INSERT INTO players_accounts (player_uuid, account_id, main) VALUES (?, ?, ?)");
+            statement.setBoolean(3, true);
+        } else {
+            statement = connection.prepareStatement(
+                    "INSERT INTO players_accounts (player_uuid, account_id) VALUES (?, ?)");
+        }
 
         statement.setString(1, playerUuid.toString());
         statement.setInt(2, accountId);
@@ -320,6 +346,28 @@ public class DatabaseManager {
         }
 
         return accounts;
+    }
+
+    /**
+     * Get the main account of a player
+     *
+     * @param playerUuid the UUID of the player
+     * @return the ID of the main account of the player or null if the player
+     *         doesn't have a main account
+     */
+    public @Nullable Integer getMainAccount(UUID playerUuid) throws SQLException {
+        PreparedStatement statement = connection.prepareStatement(
+                "SELECT account_id FROM players_accounts WHERE player_uuid = ? AND main = TRUE;");
+
+        statement.setString(1, playerUuid.toString());
+
+        ResultSet resultSet = statement.executeQuery();
+
+        if (resultSet.next()) {
+            return resultSet.getInt("account_id");
+        }
+
+        return null;
     }
 
     /**
