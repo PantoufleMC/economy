@@ -2,6 +2,7 @@ package org.pantouflemc.economy;
 
 import java.util.logging.Logger;
 
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import org.pantouflemc.economy.database.DatabaseManager;
@@ -17,6 +18,10 @@ public final class Economy extends JavaPlugin {
         instance = this;
         logger = this.getLogger();
         databaseManager = new DatabaseManager();
+
+        // Register listeners
+        PluginManager pluginManager = this.getServer().getPluginManager();
+        pluginManager.registerEvents(new org.pantouflemc.economy.listeners.Player(databaseManager), this);
     }
 
     @Override
