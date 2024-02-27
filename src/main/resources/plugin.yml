@@ -2,3 +2,25 @@ name: economy
 version: '${version}'
 main: org.pantouflemc.economy.Economy
 api-version: '1.20'
+commands:
+  economy:
+    description: Economy command
+    usage: /economy <subcommand>
+  economy.balance:
+    description: Check your balance
+    usage: /economy balance
+  economy.pay:
+    description: Pay another player
+    usage: /economy pay <player> <amount>
+  economy.set:
+    description: Set the balance of a player
+    usage: /economy set <player> <amount>
+  economy.add:
+    description: Add money to a player
+    usage: /economy add <player> <amount>
+  economy.remove:
+    description: Remove money from a player
+    usage: /economy remove <player> <amount>
+  economy.top:
+    description: Show the top players
+    usage: /economy top
