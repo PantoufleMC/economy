@@ -1,0 +1,4 @@
+name: economy
+version: '${version}'
+main: org.pantouflemc.economy.Bank
+api-version: '1.20'
