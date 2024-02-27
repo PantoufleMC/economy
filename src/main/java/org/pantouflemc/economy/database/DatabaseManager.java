@@ -116,6 +116,24 @@ public class DatabaseManager {
     }
 
     /**
+     * Delete an account
+     *
+     * @param id the ID of the account
+     */
+    public void deleteAccount(int id) throws SQLException {
+        PreparedStatement statement = connection.prepareStatement(
+                "DELETE FROM accounts WHERE id = ?;");
+
+        statement.setInt(1, 1);
+
+        int affectedRows = statement.executeUpdate();
+
+        if (affectedRows == 0) {
+            throw new SQLException("Deleting account failed, no rows affected.");
+        }
+    }
+
+    /**
      * Create a new player account relation
      *
      * @param playerUuid the UUID of the player
@@ -132,6 +150,35 @@ public class DatabaseManager {
 
         if (affectedRows == 0) {
             throw new SQLException("Creating player account relation failed, no rows affected.");
+        }
+    }
+
+    /**
+     * Delete a player account relation
+     *
+     * @param playerUuid the UUID of the player
+     * @param accountId  the ID of the account
+     */
+    public void deletePlayerAccountRelation(UUID playerUuid, int accountId) throws SQLException {
+        PreparedStatement statement = connection.prepareStatement(
+                "DELETE FROM players_accounts WHERE player_uuid = ? AND account_id = ?;");
+
+        statement.setString(1, playerUuid.toString());
+        statement.setInt(2, accountId);
+
+        int affectedRows = statement.executeUpdate();
+
+        if (affectedRows == 0) {
+            throw new SQLException("Deleting player account relation failed, no rows affected.");
+        }
+
+        statement = connection.prepareStatement(
+                "SELECT count(*) FROM players_accounts WHERE account_id = ?;");
+        statement.setInt(1, accountId);
+
+        ResultSet resultSet = statement.executeQuery();
+        if (resultSet.getInt(1) == 0) {
+            deleteAccount(accountId);
         }
     }
 
@@ -273,5 +320,39 @@ public class DatabaseManager {
         }
 
         return accounts;
+    }
+
+    /**
+     * Check if a player has a certain account
+     *
+     * @param playerUuid the UUID of the player
+     * @param accountId  the ID of the account
+     * @return true if the player has the account, false otherwise
+     */
+    public boolean hasAccount(UUID playerUuid, int accountId) throws SQLException {
+        PreparedStatement statement = connection.prepareStatement(
+                "SELECT count(*) FROM players_accounts WHERE player_uuid = ? AND account_id = ?;");
+        statement.setString(1, playerUuid.toString());
+        statement.setInt(2, accountId);
+
+        ResultSet resultSet = statement.executeQuery();
+        return resultSet.getInt(1) > 0;
+    }
+
+    /**
+     * Check if an account has enough balance
+     *
+     * @param accountId the ID of the account
+     * @param amount    the amount to check
+     * @return true if the account has enough balance, false otherwise
+     */
+    public boolean hasEnoughBalance(int accountId, double amount) throws SQLException {
+        PreparedStatement statement = connection.prepareStatement(
+                "SELECT count(*) FROM accounts WHERE id = ? AND balance >= ?;");
+        statement.setInt(1, accountId);
+        statement.setDouble(2, amount);
+
+        ResultSet resultSet = statement.executeQuery();
+        return resultSet.getInt(1) > 0;
     }
 }
