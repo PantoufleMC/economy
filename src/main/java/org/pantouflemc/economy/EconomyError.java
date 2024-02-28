@@ -22,6 +22,11 @@ public enum EconomyError {
     INVALID_AMOUNT,
 
     /**
+     * The account has not enough balance to perform the operation.
+     */
+    INSUFFICIENT_BALANCE,
+
+    /**
      * An unknown error occurred.
      */
     UNKNOWN_ERROR;
@@ -35,12 +40,14 @@ public enum EconomyError {
     public static EconomyError valueOf(DatabaseError error) {
         switch (error) {
             case ACCOUNT_NOT_FOUND:
+            case PLAYER_DOESNT_HAVE_ACCOUNT:
                 return EconomyError.ACCOUNT_NOT_FOUND;
             case PLAYER_NOT_FOUND:
                 return EconomyError.PLAYER_NOT_FOUND;
-            case ACCOUNT_HAS_NOT_ENOUGH_BALANCE:
             case INVALID_AMOUNT:
                 return EconomyError.INVALID_AMOUNT;
+            case ACCOUNT_HAS_NOT_ENOUGH_BALANCE:
+                return EconomyError.INSUFFICIENT_BALANCE;
             default:
                 return EconomyError.UNKNOWN_ERROR;
         }
