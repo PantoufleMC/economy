@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
 
+import javax.annotation.Nullable;
+
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -210,6 +212,23 @@ public final class Economy extends JavaPlugin {
         if (result.isErr()) {
             logger.warning(result.unwrapErrOrElseThrow().toString());
             return List.of();
+        }
+
+        return result.unwrapOrElseThrow();
+    }
+
+    /**
+     * Get the main account of a player.
+     * 
+     * @param player The player to get the main account of.
+     * @return The ID of the main account of the player.
+     */
+    public @Nullable Integer getMainAccount(Player player) {
+        Result<Integer, DatabaseError> result = databaseManager.getMainAccount(player.getUniqueId());
+
+        if (result.isErr()) {
+            logger.warning(result.unwrapErrOrElseThrow().toString());
+            return null;
         }
 
         return result.unwrapOrElseThrow();
