@@ -10,6 +10,7 @@ import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 import org.pantouflemc.economy.EconomyError;
 
+import com.google.common.base.Optional;
 import com.hubspot.algebra.Result;
 
 public class EconomyRemove implements CommandExecutor {
@@ -24,20 +25,20 @@ public class EconomyRemove implements CommandExecutor {
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
             @NotNull String[] args) {
         // Parse the arguments
-        ImmutablePair<String, Double> arguments = this.parseArguments(args);
-        if (arguments == null) {
+        var arguments = this.parseArguments(args);
+        if (!arguments.isPresent()) {
             return false;
         }
+        String targetName = arguments.get().getLeft();
+        double amount = arguments.get().getRight();
 
         // Get the target player
         @Nullable
-        OfflinePlayer targetPlayer = sender.getServer().getOfflinePlayerIfCached(arguments.getLeft());
+        OfflinePlayer targetPlayer = sender.getServer().getOfflinePlayerIfCached(targetName);
         if (targetPlayer == null) {
             sender.sendMessage("Target not found");
             return false;
         }
-
-        double amount = arguments.getRight();
 
         Result<Void, EconomyError> result = this.plugin.getMainAccount(targetPlayer.getPlayer()).match(
                 error -> Result.err(error),
@@ -63,16 +64,16 @@ public class EconomyRemove implements CommandExecutor {
         return true;
     }
 
-    private @Nullable ImmutablePair<String, Double> parseArguments(String[] args) {
+    private Optional<ImmutablePair<String, Double>> parseArguments(String[] args) {
         if (args.length != 2) {
-            return null;
+            return Optional.absent();
         }
 
         try {
             String playerName = args[0];
             double amount = Double.parseDouble(args[1]);
-            return new ImmutablePair<>(playerName, amount);
-        } catch (Exception e) {
+            return Optional.of(ImmutablePair.of(playerName, amount));
+        } catch (NumberFormatException e) {
             return null;
         }
     }
