@@ -45,11 +45,43 @@ public final class Economy extends JavaPlugin {
      * 
      * @return The ID of the new account.
      */
-    public void createAccount(Player player, boolean main) {
-        databaseManager.createAccount().match(
-                error -> Result.err(error),
-                accountId -> databaseManager.createPlayerAccountRelation(player.getUniqueId(), accountId, main))
-                .ifErr(error -> logger.warning(error.toString()));
+    public @Nullable Integer createAccount() {
+        Result<UnsignedInteger, DatabaseError> result = databaseManager.createAccount();
+
+        if (result.isErr()) {
+            logger.warning(result.unwrapErrOrElseThrow().toString());
+            return null;
+        }
+
+        return result.unwrapOrElseThrow().intValue();
+    }
+
+    /**
+     * Create a new account in the database.
+     * 
+     * @param player The player to create the account for.
+     * @param main   Whether the account is the main account of the player.
+     * @return The ID of the new account.
+     */
+    public @Nullable Integer createAccount(Player player, boolean main) {
+        @Nullable
+        Integer accountId = this.createAccount();
+
+        if (accountId == null) {
+            return null;
+        }
+
+        Result<Void, DatabaseError> result = databaseManager.createPlayerAccountRelation(
+                player.getUniqueId(),
+                UnsignedInteger.valueOf(accountId),
+                main);
+
+        if (result.isErr()) {
+            logger.warning(result.unwrapErrOrElseThrow().toString());
+            return null;
+        }
+
+        return accountId;
     }
 
     /**
