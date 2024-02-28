@@ -35,7 +35,8 @@ public final class Economy extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        databaseManager.disconnect();
+        databaseManager.disconnect().ifErr(
+                error -> logger.warning(error.toString()));
     }
 
     /// The following methods are used to interact with the database.

@@ -19,13 +19,15 @@ public class DatabaseManager {
     private Connection connection;
 
     public DatabaseManager() {
-        connect();
+        connect().ifErr(error -> {
+            throw new RuntimeException("Failed to connect to the database: " + error);
+        });
     }
 
     /**
      * Connect to the database
      */
-    private void connect() {
+    private Result<Void, DatabaseError> connect() {
         // TODO: Change SQLite to PostgreSQL
         File databaseDirectory = new File("plugins/Economy");
         File databaseFile = new File(databaseDirectory, "database.db");
@@ -35,61 +37,76 @@ public class DatabaseManager {
             databaseDirectory.mkdirs();
         }
 
+        // Register Driver Class, this should never fail
         try {
-            // Register Driver Class, this should never fail
             Class.forName("org.sqlite.JDBC");
-
-            // Connect to the database
-            connection = DriverManager.getConnection("jdbc:sqlite:" + databaseFile.getPath());
-
-            // Initialize the database
-            initialization();
         } catch (ClassNotFoundException e) {
+            // Driver class not found
             e.printStackTrace();
+            return Result.err(DatabaseError.UNKNOWN_ERROR);
+        }
+
+        // Connect to the database
+        try {
+            connection = DriverManager.getConnection("jdbc:sqlite:" + databaseFile.getPath());
         } catch (SQLException e) {
             e.printStackTrace();
+            return Result.err(DatabaseError.CONNECTION_ERROR);
         }
+
+        // Initialize the database
+        return initialization();
     }
 
     /**
      * Disconnect from the database
      */
-    public void disconnect() {
+    public Result<Void, DatabaseError> disconnect() {
         try {
             if (connection != null) {
                 connection.close();
             }
+
+            return Result.ok(null);
         } catch (Exception e) {
             e.printStackTrace();
+            return Result.err(DatabaseError.CONNECTION_ERROR);
         }
     }
 
     /**
      * Initialize the database
      */
-    private void initialization() throws SQLException {
-        Statement statement = connection.createStatement();
+    private Result<Void, DatabaseError> initialization() {
+        try {
+            Statement statement = this.connection.createStatement();
 
-        // Create the accounts table
-        statement.execute("CREATE TABLE IF NOT EXISTS accounts ("
-                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                + "balance DOUBLE NOT NULL"
-                + ");");
+            // Create the accounts table
+            statement.execute("CREATE TABLE IF NOT EXISTS accounts ("
+                    + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + "balance DOUBLE NOT NULL"
+                    + ");");
 
-        // Create the players - accounts relation table
-        statement.execute("CREATE TABLE IF NOT EXISTS players_accounts ("
-                + "player_uuid VARCHAR(32),"
-                + "account_id INTEGER,"
-                + "main BOOLEAN DEFAULT FALSE,"
-                + "PRIMARY KEY (player_uuid, account_id),"
-                + "FOREIGN KEY (account_id) REFERENCES accounts(id),"
-                + "UNIQUE (player_uuid, account_id)"
-                + ");"
-                + "CREATE UNIQUE INDEX IF NOT EXISTS player_uuid_index"
-                + "ON players_accounts (player_uuid, account_id)"
-                + "WHERE main = TRUE;");
+            // Create the players - accounts relation table
+            statement.execute("CREATE TABLE IF NOT EXISTS players_accounts ("
+                    + "player_uuid VARCHAR(32),"
+                    + "account_id INTEGER,"
+                    + "main BOOLEAN DEFAULT FALSE,"
+                    + "PRIMARY KEY (player_uuid, account_id),"
+                    + "FOREIGN KEY (account_id) REFERENCES accounts(id),"
+                    + "UNIQUE (player_uuid, account_id)"
+                    + ");"
+                    + "CREATE UNIQUE INDEX IF NOT EXISTS player_uuid_index"
+                    + "ON players_accounts (player_uuid, account_id)"
+                    + "WHERE main = TRUE;");
 
-        statement.close();
+            statement.close();
+
+            return Result.ok(null);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return Result.err(DatabaseError.CONNECTION_ERROR);
+        }
     }
 
     /**
