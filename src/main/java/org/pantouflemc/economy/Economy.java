@@ -208,17 +208,6 @@ public final class Economy extends JavaPlugin {
     }
 
     /**
-     * Set the balance of an account.
-     * 
-     * @param accountId The ID of the account to set the balance of.
-     * @param amount    The amount of money to set the balance to.
-     */
-    public void setBalance(int accountId, double amount) {
-        databaseManager.setBalance(UnsignedInteger.valueOf(accountId), amount)
-                .ifErr(error -> logger.warning(error.toString()));
-    }
-
-    /**
      * Add money to an account.
      * 
      * @param accountId The ID of the account to add money to.
