@@ -35,23 +35,17 @@ public class DatabaseManager {
             databaseDirectory.mkdirs();
         }
 
-        // Register Driver Class, this should never fail
         try {
+            // Register Driver Class, this should never fail
             Class.forName("org.sqlite.JDBC");
+
+            // Connect to the database
+            connection = DriverManager.getConnection("jdbc:sqlite:" + databaseFile.getPath());
+
+            // Initialize the database
+            initialization();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
-        }
-
-        // Connect to the database
-        try {
-            connection = DriverManager.getConnection("jdbc:sqlite:" + databaseFile.getPath());
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        // Initialize the database
-        try {
-            initialization();
         } catch (SQLException e) {
             e.printStackTrace();
         }
