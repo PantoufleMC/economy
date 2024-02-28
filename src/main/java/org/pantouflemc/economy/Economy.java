@@ -30,7 +30,7 @@ public final class Economy extends JavaPlugin {
 
         // Register listeners
         PluginManager pluginManager = this.getServer().getPluginManager();
-        pluginManager.registerEvents(new org.pantouflemc.economy.listeners.Player(databaseManager), this);
+        pluginManager.registerEvents(new org.pantouflemc.economy.listeners.Player(this), this);
     }
 
     @Override

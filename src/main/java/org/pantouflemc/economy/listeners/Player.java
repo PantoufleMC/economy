@@ -1,32 +1,27 @@
 package org.pantouflemc.economy.listeners;
 
-import java.util.UUID;
-
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 
-import org.pantouflemc.economy.database.DatabaseManager;
-
 public class Player implements Listener {
 
-    private final DatabaseManager database;
+    private final org.pantouflemc.economy.Economy plugin;
 
-    public Player(DatabaseManager database) {
-        this.database = database;
+    public Player(org.pantouflemc.economy.Economy plugin) {
+        this.plugin = plugin;
     }
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) throws Exception {
-        UUID playerUuid = event.getPlayer().getUniqueId();
+        org.bukkit.entity.Player player = event.getPlayer();
 
         // Check if the player already has a main account
-        if (this.database.getMainAccount(playerUuid) != null) {
+        if (this.plugin.getMainAccount(player) != null) {
             return;
         }
 
         // If the player does not have a main account, create one
-        int accountId = this.database.createAccount();
-        this.database.createPlayerAccountRelation(playerUuid, accountId, true);
+        this.plugin.createAccount(player, true);
     }
 }
