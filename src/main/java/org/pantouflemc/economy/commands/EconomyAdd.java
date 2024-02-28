@@ -8,6 +8,9 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
+import org.pantouflemc.economy.EconomyError;
+
+import com.hubspot.algebra.Result;
 
 public class EconomyAdd implements CommandExecutor {
 
@@ -36,21 +39,22 @@ public class EconomyAdd implements CommandExecutor {
 
         double amount = arguments.getRight();
 
-        // Check if the amount is positive
-        if (amount <= 0) {
-            sender.sendMessage("Amount must be positive");
+        Result<Void, EconomyError> result = this.plugin.getMainAccount(targetPlayer.getPlayer()).match(
+                error -> Result.err(error),
+                accountId -> this.plugin.addBalance(accountId, amount));
+
+        if (result.isErr()) {
+            switch (result.unwrapErrOrElseThrow()) {
+                case INVALID_AMOUNT:
+                    sender.sendMessage("Amount must be positive");
+                    break;
+                default:
+                    sender.sendMessage("An error occurred");
+                    break;
+            }
             return false;
         }
 
-        // Add the amount to the balance of the target player
-        Integer mainPlayerAccountId = this.plugin.getMainAccount(targetPlayer.getPlayer());
-        // assert mainPlayerAccountId != null : "Player does not have a main account";
-        if (mainPlayerAccountId == null) {
-            sender.sendMessage("Player does not have a main account");
-            return false;
-        }
-
-        this.plugin.addBalance(mainPlayerAccountId, amount);
         sender.sendMessage("$" + amount + " added to the balance of " + targetPlayer.getName());
 
         return true;

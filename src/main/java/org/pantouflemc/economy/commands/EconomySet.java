@@ -8,6 +8,9 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
+import org.pantouflemc.economy.EconomyError;
+
+import com.hubspot.algebra.Result;
 
 public class EconomySet implements CommandExecutor {
 
@@ -34,15 +37,24 @@ public class EconomySet implements CommandExecutor {
             return false;
         }
 
-        // Set the balance of the target player
-        Integer mainPlayerAccountId = this.plugin.getMainAccount(targetPlayer.getPlayer());
-        if (mainPlayerAccountId == null) {
-            sender.sendMessage("Player does not have a main account");
+        double amount = arguments.getRight();
+
+        Result<Void, EconomyError> result = this.plugin.getMainAccount(targetPlayer.getPlayer()).match(
+                error -> Result.err(error),
+                accountId -> this.plugin.setBalance(accountId, amount));
+
+        if (result.isErr()) {
+            switch (result.unwrapErrOrElseThrow()) {
+                case INVALID_AMOUNT:
+                    sender.sendMessage("Amount must be positive");
+                    break;
+                default:
+                    sender.sendMessage("An error occurred");
+                    break;
+            }
             return false;
         }
 
-        double amount = arguments.getRight();
-        this.plugin.setBalance(mainPlayerAccountId, amount);
         sender.sendMessage("Balance of " + targetPlayer.getName() + " set to $" + amount);
 
         return true;
