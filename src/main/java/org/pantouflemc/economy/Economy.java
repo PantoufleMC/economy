@@ -65,11 +65,11 @@ public final class Economy extends JavaPlugin {
     /**
      * Create a new account in the database.
      * 
-     * @param player The player to create the account for.
-     * @param main   Whether the account is the main account of the player.
+     * @param playerUuid The UUID of the player to create the account for.
+     * @param main       Whether the account is the main account of the player.
      * @return The ID of the new account.
      */
-    public Result<Integer, EconomyError> createAccount(Player player, boolean main) {
+    public Result<Integer, EconomyError> createAccount(UUID playerUuid, boolean main) {
         Result<Integer, EconomyError> result1 = this.createAccount();
 
         if (result1.isErr()) {
@@ -79,7 +79,7 @@ public final class Economy extends JavaPlugin {
         Integer accountId = result1.unwrapOrElseThrow();
 
         Result<Void, DatabaseError> result2 = databaseManager.createPlayerAccountRelation(
-                player.getUniqueId(),
+                playerUuid,
                 UnsignedInteger.valueOf(accountId),
                 main);
 
@@ -90,6 +90,17 @@ public final class Economy extends JavaPlugin {
         }
 
         return Result.ok(accountId);
+    }
+
+    /**
+     * Create a new account in the database.
+     * 
+     * @param player The player to create the account for.
+     * @param main   Whether the account is the main account of the player.
+     * @return The ID of the new account.
+     */
+    public Result<Integer, EconomyError> createAccount(Player player, boolean main) {
+        return this.createAccount(player.getUniqueId(), main);
     }
 
     /**
@@ -105,14 +116,35 @@ public final class Economy extends JavaPlugin {
     /**
      * Add a player to an account.
      * 
+     * @param playerUuid The UUID of the player to add to the account.
+     * @param accountId  The ID of the account to add the player to.
+     */
+    public Result<Void, EconomyError> addPlayerToAccount(UUID playerUuid, int accountId) {
+        return databaseManager.createPlayerAccountRelation(
+                playerUuid,
+                UnsignedInteger.valueOf(accountId),
+                false)
+                .mapErr(error -> EconomyError.valueOf(error));
+    }
+
+    /**
+     * Add a player to an account.
+     * 
      * @param player    The player to add to the account.
      * @param accountId The ID of the account to add the player to.
      */
     public Result<Void, EconomyError> addPlayerToAccount(Player player, int accountId) {
-        return databaseManager.createPlayerAccountRelation(
-                player.getUniqueId(),
-                UnsignedInteger.valueOf(accountId),
-                false)
+        return this.addPlayerToAccount(player.getUniqueId(), accountId);
+    }
+
+    /**
+     * Remove a player from an account.
+     * 
+     * @param playerUuid The UUID of the player to remove from the account.
+     * @param accountId  The ID of the account to remove the player from.
+     */
+    public Result<Void, EconomyError> removePlayerFromAccount(UUID playerUuid, int accountId) {
+        return databaseManager.deletePlayerAccountRelation(playerUuid, UnsignedInteger.valueOf(accountId))
                 .mapErr(error -> EconomyError.valueOf(error));
     }
 
@@ -123,8 +155,7 @@ public final class Economy extends JavaPlugin {
      * @param accountId The ID of the account to remove the player from.
      */
     public Result<Void, EconomyError> removePlayerFromAccount(Player player, int accountId) {
-        return databaseManager.deletePlayerAccountRelation(player.getUniqueId(), UnsignedInteger.valueOf(accountId))
-                .mapErr(error -> EconomyError.valueOf(error));
+        return this.removePlayerFromAccount(player.getUniqueId(), accountId);
     }
 
     /**
@@ -145,13 +176,13 @@ public final class Economy extends JavaPlugin {
     /**
      * Transfer money from one player to another.
      * 
-     * @param player1 The player to remove money from.
-     * @param player2 The player to add money to.
-     * @param amount  The amount of money to transfer.
+     * @param playerUuid1 The UUID of the player to remove money from.
+     * @param playerUuid2 The UUID of the player to add money to.
+     * @param amount      The amount of money to transfer.
      */
-    public Result<Void, EconomyError> transferMoney(Player player1, Player player2, double amount) {
-        Result<Integer, DatabaseError> result1 = databaseManager.getMainAccount(player1.getUniqueId());
-        Result<Integer, DatabaseError> result2 = databaseManager.getMainAccount(player2.getUniqueId());
+    public Result<Void, EconomyError> transferMoney(UUID playerUuid1, UUID playerUuid2, double amount) {
+        Result<Integer, DatabaseError> result1 = databaseManager.getMainAccount(playerUuid1);
+        Result<Integer, DatabaseError> result2 = databaseManager.getMainAccount(playerUuid2);
 
         if (result1.isErr()) {
             return result1
@@ -172,17 +203,14 @@ public final class Economy extends JavaPlugin {
     }
 
     /**
-     * Get the balance of a player.
+     * Transfer money from one player to another.
      * 
-     * @param player The player to get the balance of.
-     * @return The balance of the player.
+     * @param player1 The player to remove money from.
+     * @param player2 The player to add money to.
+     * @param amount  The amount of money to transfer.
      */
-    public Result<Double, EconomyError> getPlayerBalance(Player player) {
-        return databaseManager.getMainAccount(player.getUniqueId())
-                .match(
-                        error -> Result.err(error).mapOk(success -> (Double) null), // Cast to Void to match return type
-                        accountId -> databaseManager.getBalance(UnsignedInteger.valueOf(accountId)))
-                .mapErr(error -> EconomyError.valueOf(error));
+    public Result<Void, EconomyError> transferMoney(Player player1, Player player2, double amount) {
+        return this.transferMoney(player1.getUniqueId(), player2.getUniqueId(), amount);
     }
 
     /**
@@ -191,9 +219,31 @@ public final class Economy extends JavaPlugin {
      * @param accountId The ID of the account
      * @return The balance of the account.
      */
-    public Result<Double, EconomyError> getAccountBalance(int accountId) {
+    public Result<Double, EconomyError> getBalance(int accountId) {
         return databaseManager.getBalance(UnsignedInteger.valueOf(accountId))
                 .mapErr(error -> EconomyError.valueOf(error));
+    }
+
+    /**
+     * Get the balance of a player.
+     * 
+     * @param playerUuid The UUID of the player to get the balance of.
+     * @return The balance of the player.
+     */
+    public Result<Double, EconomyError> getBalance(UUID playerUuid) {
+        return databaseManager.getMainAccount(playerUuid).match(
+                error -> Result.err(EconomyError.valueOf(error)),
+                accountId -> this.getBalance(accountId));
+    }
+
+    /**
+     * Get the balance of a player.
+     * 
+     * @param player The player to get the balance of.
+     * @return The balance of the player.
+     */
+    public Result<Double, EconomyError> getBalance(Player player) {
+        return this.getBalance(player.getUniqueId());
     }
 
     /**
@@ -208,6 +258,28 @@ public final class Economy extends JavaPlugin {
     }
 
     /**
+     * Set the balance of a player.
+     * 
+     * @param playerUuid The UUID of the player to set the balance of.
+     * @param amount     The new balance of the player.
+     */
+    public Result<Void, EconomyError> setBalance(UUID playerUuid, double amount) {
+        return databaseManager.getMainAccount(playerUuid).match(
+                error -> Result.err(EconomyError.valueOf(error)),
+                accountId -> this.setBalance(accountId, amount));
+    }
+
+    /**
+     * Set the balance of a player.
+     * 
+     * @param player The player to set the balance of.
+     * @param amount The new balance of the player.
+     */
+    public Result<Void, EconomyError> setBalance(Player player, double amount) {
+        return this.setBalance(player.getUniqueId(), amount);
+    }
+
+    /**
      * Add money to an account.
      * 
      * @param accountId The ID of the account to add money to.
@@ -219,6 +291,28 @@ public final class Economy extends JavaPlugin {
     }
 
     /**
+     * Add money to a player.
+     * 
+     * @param playerUuid The UUID of the player to add money to.
+     * @param amount     The amount of money to add.
+     */
+    public Result<Void, EconomyError> addBalance(UUID playerUuid, double amount) {
+        return databaseManager.getMainAccount(playerUuid).match(
+                error -> Result.err(EconomyError.valueOf(error)),
+                accountId -> this.addBalance(accountId, amount));
+    }
+
+    /**
+     * Add money to a player.
+     * 
+     * @param player The player to add money to.
+     * @param amount The amount of money to add.
+     */
+    public Result<Void, EconomyError> addBalance(Player player, double amount) {
+        return this.addBalance(player.getUniqueId(), amount);
+    }
+
+    /**
      * Remove money from an account.
      * 
      * @param accountId The ID of the account to remove money from.
@@ -227,6 +321,28 @@ public final class Economy extends JavaPlugin {
     public Result<Void, EconomyError> removeBalance(int accountId, double amount) {
         return databaseManager.removeBalance(UnsignedInteger.valueOf(accountId), amount)
                 .mapErr(error -> EconomyError.valueOf(error));
+    }
+
+    /**
+     * Remove money from a player.
+     * 
+     * @param playerUuid The UUID of the player to remove money from.
+     * @param amount     The amount of money to remove.
+     */
+    public Result<Void, EconomyError> removeBalance(UUID playerUuid, double amount) {
+        return databaseManager.getMainAccount(playerUuid).match(
+                error -> Result.err(EconomyError.valueOf(error)),
+                accountId -> this.removeBalance(accountId, amount));
+    }
+
+    /**
+     * Remove money from a player.
+     * 
+     * @param player The player to remove money from.
+     * @param amount The amount of money to remove.
+     */
+    public Result<Void, EconomyError> removeBalance(Player player, double amount) {
+        return this.removeBalance(player.getUniqueId(), amount);
     }
 
     /**
