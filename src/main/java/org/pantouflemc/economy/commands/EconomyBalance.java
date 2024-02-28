@@ -8,14 +8,12 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-import org.pantouflemc.economy.database.DatabaseManager;
-
 public class EconomyBalance implements CommandExecutor {
 
-    private final DatabaseManager databaseManager;
+    private final org.pantouflemc.economy.Economy plugin;
 
-    public EconomyBalance(DatabaseManager databaseManager) {
-        this.databaseManager = databaseManager;
+    public EconomyBalance() {
+        this.plugin = org.pantouflemc.economy.Economy.getPlugin(org.pantouflemc.economy.Economy.class);
     }
 
     @Override
@@ -31,16 +29,8 @@ public class EconomyBalance implements CommandExecutor {
 
         // Get the balance of the player
         UUID playerUuid = player.getUniqueId();
-        try {
-            Integer mainPlayerAccountId = this.databaseManager.getMainAccount(playerUuid);
-            assert mainPlayerAccountId != null : "Player does not have a main account";
-
-            @SuppressWarnings("null")
-            double balance = this.databaseManager.getBalance(mainPlayerAccountId);
-            player.sendMessage("Your balance is $" + balance);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        double balance = this.plugin.getPlayerBalance(playerUuid);
+        player.sendMessage("Your balance is $" + balance);
 
         return true;
     }

@@ -31,7 +31,7 @@ public final class Economy extends JavaPlugin {
 
         // Register commands
         this.getCommand("economy").setExecutor(new org.pantouflemc.economy.commands.Economy());
-        this.getCommand("economy.balance").setExecutor(new EconomyBalance(databaseManager));
+        this.getCommand("economy.balance").setExecutor(new EconomyBalance());
         this.getCommand("economy.pay").setExecutor(new org.pantouflemc.economy.commands.EconomyPay());
         this.getCommand("economy.set").setExecutor(new EconomySet(databaseManager));
         this.getCommand("economy.add").setExecutor(new EconomyAdd(databaseManager));
