@@ -2,6 +2,8 @@ name: economy
 version: '${version}'
 main: org.pantouflemc.economy.Economy
 api-version: '1.20'
+libraries:
+  - com.hubspot:algebra:1.2
 commands:
   economy:
     description: Economy command
