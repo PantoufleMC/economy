@@ -4,12 +4,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.NotNull;
 import org.pantouflemc.economy.database.DatabaseError;
 import org.pantouflemc.economy.database.DatabaseManager;
 
@@ -163,14 +163,15 @@ public final class Economy extends JavaPlugin {
      * @param player The player to get the balance of.
      * @return The balance of the player.
      */
-    public @NotNull double getPlayerBalance(Player player) {
+    @SuppressWarnings("null")
+    public @Nonnull Double getPlayerBalance(Player player) {
         Result<Double, DatabaseError> result = databaseManager.getMainAccount(player.getUniqueId()).match(
                 error -> Result.err(error),
                 accountId -> databaseManager.getBalance(UnsignedInteger.valueOf(accountId)));
 
         if (result.isErr()) {
             logger.warning(result.unwrapErrOrElseThrow().toString());
-            return 0;
+            return 0.0;
         }
 
         return result.unwrapOrElseThrow();
@@ -182,12 +183,13 @@ public final class Economy extends JavaPlugin {
      * @param accountId The ID of the account
      * @return The balance of the account.
      */
-    public @NotNull double getAccountBalance(int accountId) {
+    @SuppressWarnings("null")
+    public @Nonnull Double getAccountBalance(int accountId) {
         Result<Double, DatabaseError> result = databaseManager.getBalance(UnsignedInteger.valueOf(accountId));
 
         if (result.isErr()) {
             logger.warning(result.unwrapErrOrElseThrow().toString());
-            return 0;
+            return 0.0;
         }
 
         return result.unwrapOrElseThrow();
@@ -221,7 +223,8 @@ public final class Economy extends JavaPlugin {
      * @param accountId The ID of the account.
      * @return A list of UUIDs of the players in the account.
      */
-    public @NotNull List<UUID> getPlayers(int accountId) {
+    @SuppressWarnings("null")
+    public @Nonnull List<UUID> getPlayers(int accountId) {
         Result<List<UUID>, DatabaseError> result = databaseManager.getPlayers(UnsignedInteger.valueOf(accountId));
 
         if (result.isErr()) {
@@ -238,7 +241,8 @@ public final class Economy extends JavaPlugin {
      * @param player The player to get the accounts of.
      * @return A list of account IDs of the player.
      */
-    public @NotNull List<Integer> getAccounts(Player player) {
+    @SuppressWarnings("null")
+    public @Nonnull List<Integer> getAccounts(Player player) {
         Result<List<Integer>, DatabaseError> result = databaseManager.getAccounts(player.getUniqueId());
 
         if (result.isErr()) {
