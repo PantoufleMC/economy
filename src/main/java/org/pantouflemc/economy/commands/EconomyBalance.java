@@ -22,6 +22,11 @@ public class EconomyBalance implements CommandExecutor {
             return false;
         }
 
+        // Check if the command has no arguments
+        if (args.length != 0) {
+            return false;
+        }
+
         // Get the player
         Player player = (Player) sender;
 
