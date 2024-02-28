@@ -1,7 +1,5 @@
 package org.pantouflemc.economy.commands;
 
-import java.util.UUID;
-
 import javax.annotation.Nullable;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -11,14 +9,12 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
-import org.pantouflemc.economy.database.DatabaseManager;
-
 public class EconomyRemove implements CommandExecutor {
 
-    private final DatabaseManager databaseManager;
+    private final org.pantouflemc.economy.Economy plugin;
 
-    public EconomyRemove(DatabaseManager databaseManager) {
-        this.databaseManager = databaseManager;
+    public EconomyRemove(org.pantouflemc.economy.Economy plugin) {
+        this.plugin = plugin;
     }
 
     @Override
@@ -47,28 +43,17 @@ public class EconomyRemove implements CommandExecutor {
         }
 
         // Add the amount to the balance of the target player
-        UUID targetPlayerUuid = targetPlayer.getUniqueId();
         @Nullable
         Integer mainPlayerAccountId = null;
-        try {
-            mainPlayerAccountId = this.databaseManager.getMainAccount(targetPlayerUuid);
-            // assert mainPlayerAccountId != null : "Player does not have a main account";
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        mainPlayerAccountId = this.plugin.getMainAccount(targetPlayer.getPlayer());
+        // assert mainPlayerAccountId != null : "Player does not have a main account";
         if (mainPlayerAccountId == null) {
             sender.sendMessage("Player does not have a main account");
             return false;
         }
 
-        try {
-            this.databaseManager.removeBalance(mainPlayerAccountId, amount);
-            sender.sendMessage("$" + amount + " removed from the balance of " + targetPlayer.getName());
-        } catch (Exception e) {
-            // Amount is greater than the balance
-            sender.sendMessage("Not enough money in the balance to remove");
-            return false;
-        }
+        this.plugin.removeBalance(mainPlayerAccountId, amount); // TODO: handle if the balance is not enough
+        sender.sendMessage("$" + amount + " removed from the balance of " + targetPlayer.getName());
 
         return true;
     }

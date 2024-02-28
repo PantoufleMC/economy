@@ -1,6 +1,5 @@
 package org.pantouflemc.economy.commands;
 
-import java.util.UUID;
 import javax.annotation.Nullable;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -10,14 +9,12 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
-import org.pantouflemc.economy.database.DatabaseManager;
-
 public class EconomySet implements CommandExecutor {
 
-    private final DatabaseManager databaseManager;
+    private final org.pantouflemc.economy.Economy plugin;
 
-    public EconomySet(DatabaseManager databaseManager) {
-        this.databaseManager = databaseManager;
+    public EconomySet(org.pantouflemc.economy.Economy plugin) {
+        this.plugin = plugin;
     }
 
     @Override
@@ -38,21 +35,15 @@ public class EconomySet implements CommandExecutor {
         }
 
         // Set the balance of the target player
-        double amount = arguments.getRight();
-        UUID targetPlayerUuid = targetPlayer.getUniqueId();
-        try {
-            Integer mainPlayerAccountId = this.databaseManager.getMainAccount(targetPlayerUuid);
-            // assert mainPlayerAccountId != null : "Player does not have a main account";
-            if (mainPlayerAccountId == null) {
-                sender.sendMessage("Player does not have a main account");
-                return false;
-            }
-
-            this.databaseManager.setBalance(mainPlayerAccountId, amount);
-            sender.sendMessage("Balance of " + targetPlayer.getName() + " set to $" + amount);
-        } catch (Exception e) {
-            e.printStackTrace();
+        Integer mainPlayerAccountId = this.plugin.getMainAccount(targetPlayer.getPlayer());
+        if (mainPlayerAccountId == null) {
+            sender.sendMessage("Player does not have a main account");
+            return false;
         }
+
+        double amount = arguments.getRight();
+        this.plugin.setBalance(mainPlayerAccountId, amount);
+        sender.sendMessage("Balance of " + targetPlayer.getName() + " set to $" + amount);
 
         return true;
     }

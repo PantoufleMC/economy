@@ -1,7 +1,5 @@
 package org.pantouflemc.economy.commands;
 
-import java.util.UUID;
-
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -12,8 +10,8 @@ public class EconomyBalance implements CommandExecutor {
 
     private final org.pantouflemc.economy.Economy plugin;
 
-    public EconomyBalance() {
-        this.plugin = org.pantouflemc.economy.Economy.getPlugin(org.pantouflemc.economy.Economy.class);
+    public EconomyBalance(org.pantouflemc.economy.Economy plugin) {
+        this.plugin = plugin;
     }
 
     @Override
@@ -28,8 +26,7 @@ public class EconomyBalance implements CommandExecutor {
         Player player = (Player) sender;
 
         // Get the balance of the player
-        UUID playerUuid = player.getUniqueId();
-        double balance = this.plugin.getPlayerBalance(playerUuid);
+        double balance = this.plugin.getPlayerBalance(player);
         player.sendMessage("Your balance is $" + balance);
 
         return true;

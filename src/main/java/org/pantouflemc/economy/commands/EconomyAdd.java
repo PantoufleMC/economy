@@ -1,7 +1,5 @@
 package org.pantouflemc.economy.commands;
 
-import java.util.UUID;
-
 import javax.annotation.Nullable;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -11,14 +9,12 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
-import org.pantouflemc.economy.database.DatabaseManager;
-
 public class EconomyAdd implements CommandExecutor {
 
-    private final DatabaseManager databaseManager;
+    private final org.pantouflemc.economy.Economy plugin;
 
-    public EconomyAdd(DatabaseManager databaseManager) {
-        this.databaseManager = databaseManager;
+    public EconomyAdd(org.pantouflemc.economy.Economy plugin) {
+        this.plugin = plugin;
     }
 
     @Override
@@ -47,20 +43,15 @@ public class EconomyAdd implements CommandExecutor {
         }
 
         // Add the amount to the balance of the target player
-        UUID targetPlayerUuid = targetPlayer.getUniqueId();
-        try {
-            Integer mainPlayerAccountId = this.databaseManager.getMainAccount(targetPlayerUuid);
-            // assert mainPlayerAccountId != null : "Player does not have a main account";
-            if (mainPlayerAccountId == null) {
-                sender.sendMessage("Player does not have a main account");
-                return false;
-            }
-
-            this.databaseManager.addBalance(mainPlayerAccountId, amount);
-            sender.sendMessage("$" + amount + " added to the balance of " + targetPlayer.getName());
-        } catch (Exception e) {
-            e.printStackTrace();
+        Integer mainPlayerAccountId = this.plugin.getMainAccount(targetPlayer.getPlayer());
+        // assert mainPlayerAccountId != null : "Player does not have a main account";
+        if (mainPlayerAccountId == null) {
+            sender.sendMessage("Player does not have a main account");
+            return false;
         }
+
+        this.plugin.addBalance(mainPlayerAccountId, amount);
+        sender.sendMessage("$" + amount + " added to the balance of " + targetPlayer.getName());
 
         return true;
     }
@@ -78,5 +69,5 @@ public class EconomyAdd implements CommandExecutor {
             return null;
         }
     }
-    
+
 }
