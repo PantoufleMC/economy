@@ -10,6 +10,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.pantouflemc.economy.database.DatabaseError;
 import org.pantouflemc.economy.database.DatabaseManager;
 import org.pantouflemc.economy.commands.EconomyBalance;
+import org.pantouflemc.economy.commands.EconomyPay;
 import org.pantouflemc.economy.commands.EconomySet;
 import org.pantouflemc.economy.commands.EconomyAdd;
 import org.pantouflemc.economy.commands.EconomyRemove;
@@ -36,7 +37,7 @@ public final class Economy extends JavaPlugin {
         // Register commands
         this.getCommand("economy").setExecutor(new org.pantouflemc.economy.commands.Economy());
         this.getCommand("economy.balance").setExecutor(new EconomyBalance(this));
-        this.getCommand("economy.pay").setExecutor(new org.pantouflemc.economy.commands.EconomyPay());
+        this.getCommand("economy.pay").setExecutor(new EconomyPay(this));
         this.getCommand("economy.set").setExecutor(new EconomySet(this));
         this.getCommand("economy.add").setExecutor(new EconomyAdd(this));
         this.getCommand("economy.remove").setExecutor(new EconomyRemove(this));
