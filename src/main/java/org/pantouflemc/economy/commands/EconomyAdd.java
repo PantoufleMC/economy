@@ -40,9 +40,7 @@ public class EconomyAdd implements CommandExecutor {
             return false;
         }
 
-        Result<Void, EconomyError> result = this.plugin.getMainAccount(targetPlayer.getPlayer()).match(
-                error -> Result.err(error),
-                accountId -> this.plugin.addBalance(accountId, amount));
+        Result<Void, EconomyError> result = this.plugin.addBalance(targetPlayer.getUniqueId(), amount);
 
         if (result.isErr()) {
             switch (result.unwrapErrOrElseThrow()) {

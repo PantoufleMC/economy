@@ -40,9 +40,7 @@ public class EconomySet implements CommandExecutor {
             return false;
         }
 
-        Result<Void, EconomyError> result = this.plugin.getMainAccount(targetPlayer.getPlayer()).match(
-                error -> Result.err(error),
-                accountId -> this.plugin.setBalance(accountId, amount));
+        Result<Void, EconomyError> result = this.plugin.setBalance(targetPlayer.getUniqueId(), amount);
 
         if (result.isErr()) {
             switch (result.unwrapErrOrElseThrow()) {

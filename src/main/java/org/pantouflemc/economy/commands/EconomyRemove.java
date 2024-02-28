@@ -40,9 +40,7 @@ public class EconomyRemove implements CommandExecutor {
             return false;
         }
 
-        Result<Void, EconomyError> result = this.plugin.getMainAccount(targetPlayer.getPlayer()).match(
-                error -> Result.err(error),
-                accountId -> this.plugin.removeBalance(accountId, amount));
+        Result<Void, EconomyError> result = this.plugin.removeBalance(targetPlayer.getUniqueId(), amount);
 
         if (result.isErr()) {
             switch (result.unwrapErrOrElseThrow()) {

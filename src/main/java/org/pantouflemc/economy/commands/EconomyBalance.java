@@ -31,7 +31,7 @@ public class EconomyBalance implements CommandExecutor {
         Player player = (Player) sender;
 
         // Get the balance of the player
-        var result = this.plugin.getPlayerBalance(player);
+        var result = this.plugin.getBalance(player);
 
         // Internal error: return false
         if (result.isErr()) {
