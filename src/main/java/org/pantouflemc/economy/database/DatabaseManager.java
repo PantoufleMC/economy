@@ -11,7 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import javax.annotation.Nullable;
+import com.google.common.primitives.UnsignedInteger;
+import com.hubspot.algebra.Result;
 
 public class DatabaseManager {
 
@@ -102,24 +103,28 @@ public class DatabaseManager {
      *
      * @return the ID of the new account
      */
-    public int createAccount() throws SQLException {
-        PreparedStatement statement = connection.prepareStatement(
-                "INSERT INTO accounts (balance) VALUES (0.0);",
-                Statement.RETURN_GENERATED_KEYS);
+    public Result<UnsignedInteger, DatabaseError> createAccount() {
+        try {
+            String query = "INSERT INTO accounts (balance) VALUES (0.0);";
+            PreparedStatement statement = this.connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
 
-        int affectedRows = statement.executeUpdate();
+            int affectedRows = statement.executeUpdate();
 
-        if (affectedRows == 0) {
-            throw new SQLException("Creating account failed, no rows affected.");
+            if (affectedRows == 0) {
+                // Should never happen
+                return Result.err(DatabaseError.UNKNOWN_ERROR);
+            }
+
+            ResultSet generatedKeys = statement.getGeneratedKeys();
+
+            if (generatedKeys.next()) {
+                return Result.ok(UnsignedInteger.valueOf(generatedKeys.getInt(1)));
+            }
+
+            return Result.err(DatabaseError.UNKNOWN_ERROR);
+        } catch (SQLException e) {
+            return Result.err(DatabaseError.UNKNOWN_ERROR);
         }
-
-        ResultSet generatedKeys = statement.getGeneratedKeys();
-
-        if (generatedKeys.next()) {
-            return generatedKeys.getInt(1);
-        }
-
-        throw new SQLException("Creating account failed, no ID obtained.");
     }
 
     /**
@@ -127,27 +132,22 @@ public class DatabaseManager {
      *
      * @param id the ID of the account
      */
-    public void deleteAccount(int id) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement(
-                "DELETE FROM accounts WHERE id = ?;");
+    public Result<Void, DatabaseError> deleteAccount(UnsignedInteger accountId) {
+        try {
+            String query = "DELETE FROM accounts WHERE id = ?;";
+            PreparedStatement statement = this.connection.prepareStatement(query);
+            statement.setInt(1, accountId.intValue());
 
-        statement.setInt(1, 1);
+            int affectedRows = statement.executeUpdate();
 
-        int affectedRows = statement.executeUpdate();
+            if (affectedRows == 0) {
+                return Result.err(DatabaseError.ACCOUNT_NOT_FOUND);
+            }
 
-        if (affectedRows == 0) {
-            throw new SQLException("Deleting account failed, no rows affected.");
+            return Result.ok(null);
+        } catch (SQLException e) {
+            return Result.err(DatabaseError.UNKNOWN_ERROR);
         }
-    }
-
-    /**
-     * Create a new player account relation
-     *
-     * @param playerUuid the UUID of the player
-     * @param accountId  the ID of the account
-     */
-    public void createPlayerAccountRelation(UUID playerUuid, int accountId) throws SQLException {
-        createPlayerAccountRelation(playerUuid, accountId, false);
     }
 
     /**
@@ -157,25 +157,31 @@ public class DatabaseManager {
      * @param accountId  the ID of the account
      * @param main       whether the account is the main account of the player
      */
-    public void createPlayerAccountRelation(UUID playerUuid, int accountId, boolean main) throws SQLException {
-        PreparedStatement statement;
+    public Result<Void, DatabaseError> createPlayerAccountRelation(
+            UUID playerUuid,
+            UnsignedInteger accountId,
+            boolean main) {
+        try {
+            String query = main
+                    ? "INSERT INTO players_accounts (player_uuid, account_id, main) VALUES (?, ?, ?);"
+                    : "INSERT INTO players_accounts (player_uuid, account_id) VALUES (?, ?);";
+            PreparedStatement statement = this.connection.prepareStatement(query);
+            statement.setString(1, playerUuid.toString());
+            statement.setInt(2, accountId.intValue());
 
-        if (main) {
-            statement = connection.prepareStatement(
-                    "INSERT INTO players_accounts (player_uuid, account_id, main) VALUES (?, ?, ?)");
-            statement.setBoolean(3, true);
-        } else {
-            statement = connection.prepareStatement(
-                    "INSERT INTO players_accounts (player_uuid, account_id) VALUES (?, ?)");
-        }
+            if (main) {
+                statement.setBoolean(3, true);
+            }
 
-        statement.setString(1, playerUuid.toString());
-        statement.setInt(2, accountId);
+            int affectedRows = statement.executeUpdate();
 
-        int affectedRows = statement.executeUpdate();
+            if (affectedRows == 0) {
+                return Result.err(DatabaseError.ACCOUNT_NOT_FOUND);
+            }
 
-        if (affectedRows == 0) {
-            throw new SQLException("Creating player account relation failed, no rows affected.");
+            return Result.ok(null);
+        } catch (SQLException e) {
+            return Result.err(DatabaseError.UNKNOWN_ERROR);
         }
     }
 
@@ -185,26 +191,34 @@ public class DatabaseManager {
      * @param playerUuid the UUID of the player
      * @param accountId  the ID of the account
      */
-    public void deletePlayerAccountRelation(UUID playerUuid, int accountId) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement(
-                "DELETE FROM players_accounts WHERE player_uuid = ? AND account_id = ?;");
+    public Result<Void, DatabaseError> deletePlayerAccountRelation(UUID playerUuid, UnsignedInteger accountId) {
+        try {
+            String query = "DELETE FROM players_accounts WHERE player_uuid = ? AND account_id = ?;";
+            PreparedStatement statement = this.connection.prepareStatement(query);
+            statement.setString(1, playerUuid.toString());
+            statement.setInt(2, accountId.intValue());
 
-        statement.setString(1, playerUuid.toString());
-        statement.setInt(2, accountId);
+            int affectedRows = statement.executeUpdate();
 
-        int affectedRows = statement.executeUpdate();
+            if (affectedRows == 0) {
+                return Result.err(DatabaseError.ACCOUNT_NOT_FOUND);
+            }
 
-        if (affectedRows == 0) {
-            throw new SQLException("Deleting player account relation failed, no rows affected.");
-        }
+            // Check if the account has no more players associated with it and delete it if
+            // it's the case
+            String query2 = "SELECT count(*) FROM players_accounts WHERE account_id = ?;";
+            PreparedStatement statement2 = this.connection.prepareStatement(query2);
+            statement2.setInt(1, accountId.intValue());
 
-        statement = connection.prepareStatement(
-                "SELECT count(*) FROM players_accounts WHERE account_id = ?;");
-        statement.setInt(1, accountId);
+            ResultSet resultSet = statement2.executeQuery();
 
-        ResultSet resultSet = statement.executeQuery();
-        if (resultSet.getInt(1) == 0) {
-            deleteAccount(accountId);
+            if (resultSet.getInt(1) == 0) {
+                deleteAccount(accountId);
+            }
+
+            return Result.ok(null);
+        } catch (SQLException e) {
+            return Result.err(DatabaseError.UNKNOWN_ERROR);
         }
     }
 
@@ -214,19 +228,22 @@ public class DatabaseManager {
      * @param accountId the ID of the account
      * @return the balance of the account
      */
-    public double getBalance(int accountId) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement(
-                "SELECT balance FROM accounts WHERE id = ?;");
+    public Result<Double, DatabaseError> getBalance(UnsignedInteger accountId) {
+        try {
+            String query = "SELECT balance FROM accounts WHERE id = ?;";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setInt(1, accountId.intValue());
 
-        statement.setInt(1, accountId);
+            ResultSet resultSet = statement.executeQuery();
 
-        ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                return Result.ok(resultSet.getDouble("balance"));
+            }
 
-        if (resultSet.next()) {
-            return resultSet.getDouble("balance");
+            return Result.err(DatabaseError.ACCOUNT_NOT_FOUND);
+        } catch (SQLException e) {
+            return Result.err(DatabaseError.UNKNOWN_ERROR);
         }
-
-        throw new SQLException("Account not found.");
     }
 
     /**
@@ -235,21 +252,26 @@ public class DatabaseManager {
      * @param accountId the ID of the account
      * @param balance   the new balance of the account (must be positive)
      */
-    public void setBalance(int accountId, double balance) throws SQLException {
+    public Result<Void, DatabaseError> setBalance(UnsignedInteger accountId, double balance) {
         if (balance < 0) {
-            throw new SQLException("Setting balance failed, balance cannot be negative.");
+            return Result.err(DatabaseError.INVALID_AMOUNT);
         }
 
-        PreparedStatement statement = connection.prepareStatement(
-                "UPDATE accounts SET balance = ? WHERE id = ?;");
+        try {
+            String query = "UPDATE accounts SET balance = ? WHERE id = ?;";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setDouble(1, balance);
+            statement.setInt(2, accountId.intValue());
 
-        statement.setDouble(1, balance);
-        statement.setInt(2, accountId);
+            int affectedRows = statement.executeUpdate();
 
-        int affectedRows = statement.executeUpdate();
+            if (affectedRows == 0) {
+                return Result.err(DatabaseError.ACCOUNT_NOT_FOUND);
+            }
 
-        if (affectedRows == 0) {
-            throw new SQLException("Setting balance failed, no rows affected.");
+            return Result.ok(null);
+        } catch (SQLException e) {
+            return Result.err(DatabaseError.UNKNOWN_ERROR);
         }
     }
 
@@ -259,21 +281,26 @@ public class DatabaseManager {
      * @param accountId the ID of the account
      * @param amount    the amount to add (must be positive)
      */
-    public void addBalance(int accountId, double amount) throws SQLException {
+    public Result<Void, DatabaseError> addBalance(UnsignedInteger accountId, double amount) {
         if (amount < 0) {
-            throw new SQLException("Adding balance failed, amount cannot be negative.");
+            return Result.err(DatabaseError.INVALID_AMOUNT);
         }
 
-        PreparedStatement statement = connection.prepareStatement(
-                "UPDATE accounts SET balance = balance + ? WHERE id = ?;");
+        try {
+            String query = "UPDATE accounts SET balance = balance + ? WHERE id = ?;";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setDouble(1, amount);
+            statement.setInt(2, accountId.intValue());
 
-        statement.setDouble(1, amount);
-        statement.setInt(2, accountId);
+            int affectedRows = statement.executeUpdate();
 
-        int affectedRows = statement.executeUpdate();
+            if (affectedRows == 0) {
+                return Result.err(DatabaseError.ACCOUNT_NOT_FOUND);
+            }
 
-        if (affectedRows == 0) {
-            throw new SQLException("Adding balance failed, no rows affected.");
+            return Result.ok(null);
+        } catch (SQLException e) {
+            return Result.err(DatabaseError.UNKNOWN_ERROR);
         }
     }
 
@@ -283,22 +310,32 @@ public class DatabaseManager {
      * @param accountId the ID of the account
      * @param amount    the amount to remove (must be positive)
      */
-    public void removeBalance(int accountId, double amount) throws SQLException {
+    public Result<Void, DatabaseError> removeBalance(UnsignedInteger accountId, double amount) {
         if (amount < 0) {
-            throw new SQLException("Removing balance failed, amount cannot be negative.");
+            return Result.err(DatabaseError.INVALID_AMOUNT);
         }
 
-        PreparedStatement statement = connection.prepareStatement(
-                "UPDATE accounts SET balance = balance - ? WHERE id = ? AND balance >= ?;");
-        statement.setDouble(1, amount);
-        statement.setInt(2, accountId);
-        statement.setDouble(3, amount);
+        try {
+            String query = "UPDATE accounts SET balance = balance - ? WHERE id = ? AND balance >= ?;";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setDouble(1, amount);
+            statement.setInt(2, accountId.intValue());
+            statement.setDouble(3, amount);
 
-        int affectedRows = statement.executeUpdate();
+            int affectedRows = statement.executeUpdate();
 
-        if (affectedRows == 0) {
-            // Either the account doesn't exist or the balance is too low
-            throw new SQLException("Removing balance failed, no rows affected.");
+            if (affectedRows == 0) {
+                // We can't distinguish between the account not existing and the account not
+                // having enough balance, so we return ACCOUNT_HAS_NOT_ENOUGH_BALANCE in both
+                // cases in the hope that the caller will give a correct account ID
+
+                // return Result.err(DatabaseError.ACCOUNT_NOT_FOUND);
+                return Result.err(DatabaseError.ACCOUNT_HAS_NOT_ENOUGH_BALANCE);
+            }
+
+            return Result.ok(null);
+        } catch (SQLException e) {
+            return Result.err(DatabaseError.UNKNOWN_ERROR);
         }
     }
 
@@ -308,21 +345,26 @@ public class DatabaseManager {
      * @param accountId the ID of the account
      * @return the UUIDs of the players associated with the account
      */
-    public List<UUID> getPlayers(int accountId) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement(
-                "SELECT player_uuid FROM players_accounts WHERE account_id = ?;");
+    public Result<List<UUID>, DatabaseError> getPlayers(UnsignedInteger accountId) {
+        try {
+            String query = "SELECT player_uuid FROM players_accounts WHERE account_id = ?;";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setInt(1, accountId.intValue());
 
-        statement.setInt(1, accountId);
+            ResultSet resultSet = statement.executeQuery();
 
-        ResultSet resultSet = statement.executeQuery();
+            List<UUID> players = new ArrayList<>();
 
-        List<UUID> players = new ArrayList<>();
+            while (resultSet.next()) {
+                players.add(UUID.fromString(resultSet.getString("player_uuid")));
+            }
 
-        while (resultSet.next()) {
-            players.add(UUID.fromString(resultSet.getString("player_uuid")));
+            // We can't distinguish between the account not existing and the account not
+            // having any players, so we return an empty list in both cases
+            return Result.ok(players);
+        } catch (SQLException e) {
+            return Result.err(DatabaseError.UNKNOWN_ERROR);
         }
-
-        return players;
     }
 
     /**
@@ -331,43 +373,50 @@ public class DatabaseManager {
      * @param playerUuid the UUID of the player
      * @return the IDs of the accounts associated with the player
      */
-    public List<Integer> getAccounts(UUID playerUuid) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement(
-                "SELECT account_id FROM players_accounts WHERE player_uuid = ?;");
+    public Result<List<Integer>, DatabaseError> getAccounts(UUID playerUuid) {
+        try {
+            String query = "SELECT account_id FROM players_accounts WHERE player_uuid = ?;";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setString(1, playerUuid.toString());
 
-        statement.setString(1, playerUuid.toString());
+            ResultSet resultSet = statement.executeQuery();
 
-        ResultSet resultSet = statement.executeQuery();
+            List<Integer> accounts = new ArrayList<>();
 
-        List<Integer> accounts = new ArrayList<>();
+            while (resultSet.next()) {
+                accounts.add(resultSet.getInt("account_id"));
+            }
 
-        while (resultSet.next()) {
-            accounts.add(resultSet.getInt("account_id"));
+            // We can't distinguish between the player not existing and the player not
+            // having any accounts, so we return an empty list in both cases
+            return Result.ok(accounts);
+        } catch (SQLException e) {
+            return Result.err(DatabaseError.UNKNOWN_ERROR);
         }
-
-        return accounts;
     }
 
     /**
      * Get the main account of a player
      *
      * @param playerUuid the UUID of the player
-     * @return the ID of the main account of the player or null if the player
-     *         doesn't have a main account
+     * @return the ID of the main account of the player
      */
-    public @Nullable Integer getMainAccount(UUID playerUuid) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement(
-                "SELECT account_id FROM players_accounts WHERE player_uuid = ? AND main = TRUE;");
+    public Result<Integer, DatabaseError> getMainAccount(UUID playerUuid) {
+        try {
+            String query = "SELECT account_id FROM players_accounts WHERE player_uuid = ? AND main = TRUE;";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setString(1, playerUuid.toString());
 
-        statement.setString(1, playerUuid.toString());
+            ResultSet resultSet = statement.executeQuery();
 
-        ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                return Result.ok(resultSet.getInt("account_id"));
+            }
 
-        if (resultSet.next()) {
-            return resultSet.getInt("account_id");
+            return Result.err(DatabaseError.PLAYER_DOESNT_HAVE_ACCOUNT);
+        } catch (SQLException e) {
+            return Result.err(DatabaseError.UNKNOWN_ERROR);
         }
-
-        return null;
     }
 
     /**
@@ -377,30 +426,18 @@ public class DatabaseManager {
      * @param accountId  the ID of the account
      * @return true if the player has the account, false otherwise
      */
-    public boolean hasAccount(UUID playerUuid, int accountId) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement(
-                "SELECT count(*) FROM players_accounts WHERE player_uuid = ? AND account_id = ?;");
-        statement.setString(1, playerUuid.toString());
-        statement.setInt(2, accountId);
+    public Result<Boolean, DatabaseError> hasAccount(UUID playerUuid, UnsignedInteger accountId) {
+        try {
+            String query = "SELECT count(*) FROM players_accounts WHERE player_uuid = ? AND account_id = ?;";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setString(1, playerUuid.toString());
+            statement.setInt(2, accountId.intValue());
 
-        ResultSet resultSet = statement.executeQuery();
-        return resultSet.getInt(1) > 0;
-    }
+            ResultSet resultSet = statement.executeQuery();
 
-    /**
-     * Check if an account has enough balance
-     *
-     * @param accountId the ID of the account
-     * @param amount    the amount to check
-     * @return true if the account has enough balance, false otherwise
-     */
-    public boolean hasEnoughBalance(int accountId, double amount) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement(
-                "SELECT count(*) FROM accounts WHERE id = ? AND balance >= ?;");
-        statement.setInt(1, accountId);
-        statement.setDouble(2, amount);
-
-        ResultSet resultSet = statement.executeQuery();
-        return resultSet.getInt(1) > 0;
+            return Result.ok(resultSet.getInt(1) > 0);
+        } catch (SQLException e) {
+            return Result.err(DatabaseError.UNKNOWN_ERROR);
+        }
     }
 }
