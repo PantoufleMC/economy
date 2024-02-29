@@ -248,6 +248,8 @@ public class DatabaseManager {
             PreparedStatement statement = this.connection.prepareStatement(query);
             statement.setString(1, playerUuid.toString());
             statement.setInt(2, accountId.intValue());
+            statement.setInt(3, accountId.intValue());
+            statement.setInt(4, accountId.intValue());
 
             int affectedRows = statement.executeUpdate();
 
