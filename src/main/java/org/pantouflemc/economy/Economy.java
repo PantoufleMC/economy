@@ -33,7 +33,7 @@ public final class Economy extends JavaPlugin {
 
         // Register listeners
         PluginManager pluginManager = this.getServer().getPluginManager();
-        pluginManager.registerEvents(new org.pantouflemc.economy.listeners.Player(this), this);
+        pluginManager.registerEvents(new org.pantouflemc.economy.listeners.Player(this, databaseManager), this);
 
         // Register commands
         this.getCommand("economy").setExecutor(new org.pantouflemc.economy.commands.Economy());
