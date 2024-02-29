@@ -233,14 +233,18 @@ public class DatabaseManager {
     }
 
     /**
-     * Delete a player account relation
+     * Delete a player account relation and the account if it has no more players
+     * associated
      *
      * @param playerUuid the UUID of the player
      * @param accountId  the ID of the account
      */
     public Result<Void, DatabaseError> deletePlayerAccountRelation(UUID playerUuid, UnsignedInteger accountId) {
         try {
-            String query = "DELETE FROM players_accounts WHERE player_uuid = ? AND account_id = ?;";
+            String query = """
+                    DELETE FROM players_accounts WHERE player_uuid = ? AND account_id = ?;
+                    DELETE FROM accounts WHERE id = ? AND NOT EXISTS (SELECT 1 FROM players_accounts WHERE account_id = ?);
+                    """;
             PreparedStatement statement = this.connection.prepareStatement(query);
             statement.setString(1, playerUuid.toString());
             statement.setInt(2, accountId.intValue());
@@ -249,18 +253,6 @@ public class DatabaseManager {
 
             if (affectedRows == 0) {
                 return Result.err(DatabaseError.ACCOUNT_NOT_FOUND);
-            }
-
-            // Check if the account has no more players associated with it and delete it if
-            // it's the case
-            String query2 = "SELECT count(*) FROM players_accounts WHERE account_id = ?;";
-            PreparedStatement statement2 = this.connection.prepareStatement(query2);
-            statement2.setInt(1, accountId.intValue());
-
-            ResultSet resultSet = statement2.executeQuery();
-
-            if (resultSet.getInt(1) == 0) {
-                deleteAccount(accountId);
             }
 
             return Result.ok(null);
