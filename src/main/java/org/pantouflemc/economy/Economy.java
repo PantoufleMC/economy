@@ -37,13 +37,13 @@ public final class Economy extends JavaPlugin {
         pluginManager.registerEvents(new org.pantouflemc.economy.listeners.Player(this, databaseManager), this);
 
         // Register commands
-        this.getCommand("economy").setExecutor(new org.pantouflemc.economy.commands.Economy());
-        this.getCommand("economy.balance").setExecutor(new EconomyBalance(this));
-        this.getCommand("economy.pay").setExecutor(new EconomyPay(this));
-        this.getCommand("economy.set").setExecutor(new EconomySet(this));
-        this.getCommand("economy.add").setExecutor(new EconomyAdd(this));
-        this.getCommand("economy.remove").setExecutor(new EconomyRemove(this));
-        this.getCommand("economy.top").setExecutor(new EconomyTop(this));
+        var command = new org.pantouflemc.economy.commands.Economy(this);
+        command.registerSubCommand("balance", new EconomyBalance(this), this)
+                .registerSubCommand("pay", new EconomyPay(this), this)
+                .registerSubCommand("set", new EconomySet(this), this)
+                .registerSubCommand("add", new EconomyAdd(this), this)
+                .registerSubCommand("remove", new EconomyRemove(this), this)
+                .registerSubCommand("top", new EconomyTop(this), this);
     }
 
     @Override
