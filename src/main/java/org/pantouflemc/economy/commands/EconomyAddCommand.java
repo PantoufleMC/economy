@@ -5,7 +5,6 @@ import javax.annotation.Nullable;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 import org.pantouflemc.economy.EconomyError;
@@ -13,11 +12,12 @@ import org.pantouflemc.economy.EconomyError;
 import com.google.common.base.Optional;
 import com.hubspot.algebra.Result;
 
-public class EconomyRemove implements CommandExecutor {
+public class EconomyAddCommand extends EconomyCommandExecutor {
 
     private final org.pantouflemc.economy.Economy plugin;
 
-    public EconomyRemove(org.pantouflemc.economy.Economy plugin) {
+    public EconomyAddCommand(org.pantouflemc.economy.Economy plugin) {
+        super("add");
         this.plugin = plugin;
     }
 
@@ -40,15 +40,12 @@ public class EconomyRemove implements CommandExecutor {
             return false;
         }
 
-        Result<Void, EconomyError> result = this.plugin.removeBalance(targetPlayer.getUniqueId(), amount);
+        Result<Void, EconomyError> result = this.plugin.addBalance(targetPlayer.getUniqueId(), amount);
 
         if (result.isErr()) {
             switch (result.unwrapErrOrElseThrow()) {
                 case INVALID_AMOUNT:
                     sender.sendMessage("Amount must be positive");
-                    break;
-                case INSUFFICIENT_BALANCE:
-                    sender.sendMessage("Player does not have enough balance");
                     break;
                 default:
                     sender.sendMessage("An error occurred");
@@ -57,7 +54,7 @@ public class EconomyRemove implements CommandExecutor {
             return false;
         }
 
-        sender.sendMessage("$" + amount + " removed from the balance of " + targetPlayer.getName());
+        sender.sendMessage("$" + amount + " added to the balance of " + targetPlayer.getName());
 
         return true;
     }

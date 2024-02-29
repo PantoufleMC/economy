@@ -5,18 +5,18 @@ import javax.annotation.Nullable;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import com.google.common.base.Optional;
 
-public class EconomyPay implements CommandExecutor {
+public class EconomyPayCommand extends EconomyCommandExecutor {
 
     private final org.pantouflemc.economy.Economy plugin;
 
-    public EconomyPay(org.pantouflemc.economy.Economy plugin) {
+    public EconomyPayCommand(org.pantouflemc.economy.Economy plugin) {
+        super("pay");
         this.plugin = plugin;
     }
 
