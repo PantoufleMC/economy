@@ -84,10 +84,12 @@ public class DatabaseManager {
             Statement statement = this.connection.createStatement();
 
             // Create the accounts table
-            statement.execute("CREATE TABLE IF NOT EXISTS accounts ("
-                    + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                    + "balance DOUBLE NOT NULL"
-                    + ");");
+            statement.execute("""
+                    CREATE TABLE IF NOT EXISTS accounts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        balance DOUBLE NOT NULL
+                    );
+                    """);
 
             // Create the players name - uuid relation table
             statement.execute("""
@@ -98,18 +100,19 @@ public class DatabaseManager {
                     """);
 
             // Create the players - accounts relation table
-            statement.execute("CREATE TABLE IF NOT EXISTS players_accounts ("
-                    + "player_uuid VARCHAR(32),"
-                    + "account_id INTEGER,"
-                    + "main BOOLEAN DEFAULT FALSE,"
-                    + "PRIMARY KEY (player_uuid, account_id),"
-                    + "FOREIGN KEY (player_uuid) REFERENCES players(player_uuid),"
-                    + "FOREIGN KEY (account_id) REFERENCES accounts(id),"
-                    + "UNIQUE (player_uuid, account_id)"
-                    + ");"
-                    + "CREATE UNIQUE INDEX IF NOT EXISTS player_uuid_index"
-                    + "ON players_accounts (player_uuid, account_id)"
-                    + "WHERE main = TRUE;");
+            statement.execute("""
+                    CREATE TABLE IF NOT EXISTS players_accounts (
+                        player_uuid VARCHAR(32),
+                        account_id INTEGER,
+                        main BOOLEAN DEFAULT FALSE,
+                        PRIMARY KEY (player_uuid, account_id),
+                        FOREIGN KEY (player_uuid) REFERENCES players(player_uuid),
+                        FOREIGN KEY (account_id) REFERENCES accounts(id),
+                        UNIQUE (player_uuid, account_id)
+                    );
+                    CREATE UNIQUE INDEX IF NOT EXISTS player_uuid_index
+                    ON players_accounts (player_uuid, account_id) WHERE main = TRUE;
+                    """);
 
             statement.close();
 
@@ -233,34 +236,28 @@ public class DatabaseManager {
     }
 
     /**
-     * Delete a player account relation
+     * Delete a player account relation and the account if it has no more players
+     * associated
      *
      * @param playerUuid the UUID of the player
      * @param accountId  the ID of the account
      */
     public Result<Void, DatabaseError> deletePlayerAccountRelation(UUID playerUuid, UnsignedInteger accountId) {
         try {
-            String query = "DELETE FROM players_accounts WHERE player_uuid = ? AND account_id = ?;";
+            String query = """
+                    DELETE FROM players_accounts WHERE player_uuid = ? AND account_id = ?;
+                    DELETE FROM accounts WHERE id = ? AND NOT EXISTS (SELECT 1 FROM players_accounts WHERE account_id = ?);
+                    """;
             PreparedStatement statement = this.connection.prepareStatement(query);
             statement.setString(1, playerUuid.toString());
             statement.setInt(2, accountId.intValue());
+            statement.setInt(3, accountId.intValue());
+            statement.setInt(4, accountId.intValue());
 
             int affectedRows = statement.executeUpdate();
 
             if (affectedRows == 0) {
                 return Result.err(DatabaseError.ACCOUNT_NOT_FOUND);
-            }
-
-            // Check if the account has no more players associated with it and delete it if
-            // it's the case
-            String query2 = "SELECT count(*) FROM players_accounts WHERE account_id = ?;";
-            PreparedStatement statement2 = this.connection.prepareStatement(query2);
-            statement2.setInt(1, accountId.intValue());
-
-            ResultSet resultSet = statement2.executeQuery();
-
-            if (resultSet.getInt(1) == 0) {
-                deleteAccount(accountId);
             }
 
             return Result.ok(null);
