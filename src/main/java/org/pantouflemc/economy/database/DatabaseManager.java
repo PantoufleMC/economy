@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
+
 import com.google.common.primitives.UnsignedInteger;
 import com.hubspot.algebra.Result;
 
@@ -87,12 +89,21 @@ public class DatabaseManager {
                     + "balance DOUBLE NOT NULL"
                     + ");");
 
+            // Create the players name - uuid relation table
+            statement.execute("""
+                    CREATE TABLE IF NOT EXISTS players (
+                        player_uuid VARCHAR(32) PRIMARY KEY,
+                        player_name VARCHAR(16) NOT NULL
+                    );
+                    """);
+
             // Create the players - accounts relation table
             statement.execute("CREATE TABLE IF NOT EXISTS players_accounts ("
                     + "player_uuid VARCHAR(32),"
                     + "account_id INTEGER,"
                     + "main BOOLEAN DEFAULT FALSE,"
                     + "PRIMARY KEY (player_uuid, account_id),"
+                    + "FOREIGN KEY (player_uuid) REFERENCES players(player_uuid),"
                     + "FOREIGN KEY (account_id) REFERENCES accounts(id),"
                     + "UNIQUE (player_uuid, account_id)"
                     + ");"
@@ -153,6 +164,31 @@ public class DatabaseManager {
 
             if (affectedRows == 0) {
                 return Result.err(DatabaseError.ACCOUNT_NOT_FOUND);
+            }
+
+            return Result.ok(null);
+        } catch (SQLException e) {
+            return Result.err(DatabaseError.UNKNOWN_ERROR);
+        }
+    }
+
+    /**
+     * Add a player to the database
+     *
+     * @param playerUuid the UUID of the player
+     * @param playerName the name of the player
+     */
+    public Result<Void, DatabaseError> addPlayer(UUID playerUuid, String playerName) {
+        try {
+            String query = "INSERT INTO players (player_uuid, player_name) VALUES (?, ?);";
+            PreparedStatement statement = this.connection.prepareStatement(query);
+            statement.setString(1, playerUuid.toString());
+            statement.setString(2, playerName);
+
+            int affectedRows = statement.executeUpdate();
+
+            if (affectedRows == 0) {
+                return Result.err(DatabaseError.UNKNOWN_ERROR);
             }
 
             return Result.ok(null);
@@ -400,6 +436,45 @@ public class DatabaseManager {
 
             // We can't distinguish between the player not existing and the player not
             // having any accounts, so we return an empty list in both cases
+            return Result.ok(accounts);
+        } catch (SQLException e) {
+            return Result.err(DatabaseError.UNKNOWN_ERROR);
+        }
+    }
+
+    /**
+     * Get the top player accounts
+     * 
+     * @param limit  the maximum number of accounts to return
+     * @param offset the number of accounts to skip
+     * @return
+     */
+    public Result<List<ImmutablePair<String, Double>>, DatabaseError> getTopPlayerAccounts(
+            int limit,
+            int offset) {
+        try {
+            String query = """
+                    SELECT player_name, balance FROM players_accounts
+                    LEFT JOIN accounts ON players_accounts.account_id = accounts.id
+                    LEFT JOIN players ON players_accounts.player_uuid = players.player_uuid
+                    WHERE main = TRUE
+                    ORDER BY balance DESC
+                    LIMIT ? OFFSET ?;
+                    """;
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setInt(1, limit);
+            statement.setInt(2, offset);
+
+            ResultSet resultSet = statement.executeQuery();
+
+            List<ImmutablePair<String, Double>> accounts = new ArrayList<>();
+
+            while (resultSet.next()) {
+                accounts.add(ImmutablePair.of(
+                        resultSet.getString("player_name"),
+                        resultSet.getDouble("balance")));
+            }
+
             return Result.ok(accounts);
         } catch (SQLException e) {
             return Result.err(DatabaseError.UNKNOWN_ERROR);
