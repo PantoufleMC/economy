@@ -87,12 +87,21 @@ public class DatabaseManager {
                     + "balance DOUBLE NOT NULL"
                     + ");");
 
+            // Create the players name - uuid relation table
+            statement.execute("""
+                    CREATE TABLE IF NOT EXISTS players (
+                        player_uuid VARCHAR(32) PRIMARY KEY,
+                        player_name VARCHAR(16) NOT NULL
+                    );
+                    """);
+
             // Create the players - accounts relation table
             statement.execute("CREATE TABLE IF NOT EXISTS players_accounts ("
                     + "player_uuid VARCHAR(32),"
                     + "account_id INTEGER,"
                     + "main BOOLEAN DEFAULT FALSE,"
                     + "PRIMARY KEY (player_uuid, account_id),"
+                    + "FOREIGN KEY (player_uuid) REFERENCES players(player_uuid),"
                     + "FOREIGN KEY (account_id) REFERENCES accounts(id),"
                     + "UNIQUE (player_uuid, account_id)"
                     + ");"
