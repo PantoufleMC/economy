@@ -5,12 +5,12 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.pantouflemc.economy.database.DatabaseManager;
 
-public class Player implements Listener {
+public class PlayerListener implements Listener {
 
     private final org.pantouflemc.economy.Economy plugin;
     private final DatabaseManager databaseManager;
 
-    public Player(org.pantouflemc.economy.Economy plugin, DatabaseManager databaseManager) {
+    public PlayerListener(org.pantouflemc.economy.Economy plugin, DatabaseManager databaseManager) {
         this.plugin = plugin;
         this.databaseManager = databaseManager;
     }

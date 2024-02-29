@@ -17,6 +17,7 @@ import org.pantouflemc.economy.commands.EconomySetCommand;
 import org.pantouflemc.economy.commands.EconomyTopCommand;
 import org.pantouflemc.economy.database.DatabaseError;
 import org.pantouflemc.economy.database.DatabaseManager;
+import org.pantouflemc.economy.listeners.PlayerListener;
 
 import com.google.common.primitives.UnsignedInteger;
 import com.hubspot.algebra.Result;
@@ -35,7 +36,7 @@ public final class Economy extends JavaPlugin {
 
         // Register listeners
         PluginManager pluginManager = this.getServer().getPluginManager();
-        pluginManager.registerEvents(new org.pantouflemc.economy.listeners.Player(this, databaseManager), this);
+        pluginManager.registerEvents(new PlayerListener(this, databaseManager), this);
 
         // Register commands
         var command = new EconomyCommand(this);
