@@ -10,12 +10,12 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
-public class Economy implements CommandExecutor {
+public class EconomyCommand extends EconomyCommandExecutor {
 
     protected Map<String, CommandExecutor> subCommands = new HashMap<>();
-    protected final String commandName = "economy";
 
-    public Economy(JavaPlugin plugin) {
+    public EconomyCommand(JavaPlugin plugin) {
+        super("economy");
         plugin.getCommand(this.commandName).setExecutor(this);
     }
 
@@ -45,9 +45,9 @@ public class Economy implements CommandExecutor {
      * @param plugin   the plugin to register the command to
      * @return this
      */
-    public Economy registerSubCommand(String name, CommandExecutor executor, JavaPlugin plugin) {
-        plugin.getCommand(this.commandName + "." + name).setExecutor(executor);
-        subCommands.put(name, executor);
+    public EconomyCommand registerSubCommand(EconomyCommandExecutor executor, JavaPlugin plugin) {
+        plugin.getCommand(this.commandName + "." + executor.commandName).setExecutor(executor);
+        subCommands.put(executor.commandName, executor);
         return this;
     }
 

@@ -10,12 +10,13 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.pantouflemc.economy.database.DatabaseError;
 import org.pantouflemc.economy.database.DatabaseManager;
-import org.pantouflemc.economy.commands.EconomyBalance;
-import org.pantouflemc.economy.commands.EconomyPay;
-import org.pantouflemc.economy.commands.EconomySet;
-import org.pantouflemc.economy.commands.EconomyAdd;
-import org.pantouflemc.economy.commands.EconomyRemove;
-import org.pantouflemc.economy.commands.EconomyTop;
+import org.pantouflemc.economy.commands.EconomyCommand;
+import org.pantouflemc.economy.commands.EconomyBalanceCommand;
+import org.pantouflemc.economy.commands.EconomyPayCommand;
+import org.pantouflemc.economy.commands.EconomySetCommand;
+import org.pantouflemc.economy.commands.EconomyAddCommand;
+import org.pantouflemc.economy.commands.EconomyRemoveCommand;
+import org.pantouflemc.economy.commands.EconomyTopCommand;
 
 import com.google.common.primitives.UnsignedInteger;
 import com.hubspot.algebra.Result;
@@ -37,13 +38,13 @@ public final class Economy extends JavaPlugin {
         pluginManager.registerEvents(new org.pantouflemc.economy.listeners.Player(this, databaseManager), this);
 
         // Register commands
-        var command = new org.pantouflemc.economy.commands.Economy(this);
-        command.registerSubCommand("balance", new EconomyBalance(this), this)
-                .registerSubCommand("pay", new EconomyPay(this), this)
-                .registerSubCommand("set", new EconomySet(this), this)
-                .registerSubCommand("add", new EconomyAdd(this), this)
-                .registerSubCommand("remove", new EconomyRemove(this), this)
-                .registerSubCommand("top", new EconomyTop(this), this);
+        var command = new EconomyCommand(this);
+        command.registerSubCommand(new EconomyBalanceCommand(this), this)
+                .registerSubCommand(new EconomyPayCommand(this), this)
+                .registerSubCommand(new EconomySetCommand(this), this)
+                .registerSubCommand(new EconomyAddCommand(this), this)
+                .registerSubCommand(new EconomyRemoveCommand(this), this)
+                .registerSubCommand(new EconomyTopCommand(this), this);
     }
 
     @Override

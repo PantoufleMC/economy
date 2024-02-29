@@ -5,7 +5,6 @@ import javax.annotation.Nullable;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 import org.pantouflemc.economy.EconomyError;
@@ -13,11 +12,12 @@ import org.pantouflemc.economy.EconomyError;
 import com.google.common.base.Optional;
 import com.hubspot.algebra.Result;
 
-public class EconomyAdd implements CommandExecutor {
+public class EconomySetCommand extends EconomyCommandExecutor {
 
     private final org.pantouflemc.economy.Economy plugin;
 
-    public EconomyAdd(org.pantouflemc.economy.Economy plugin) {
+    public EconomySetCommand(org.pantouflemc.economy.Economy plugin) {
+        super("set");
         this.plugin = plugin;
     }
 
@@ -40,7 +40,7 @@ public class EconomyAdd implements CommandExecutor {
             return false;
         }
 
-        Result<Void, EconomyError> result = this.plugin.addBalance(targetPlayer.getUniqueId(), amount);
+        Result<Void, EconomyError> result = this.plugin.setBalance(targetPlayer.getUniqueId(), amount);
 
         if (result.isErr()) {
             switch (result.unwrapErrOrElseThrow()) {
@@ -54,7 +54,7 @@ public class EconomyAdd implements CommandExecutor {
             return false;
         }
 
-        sender.sendMessage("$" + amount + " added to the balance of " + targetPlayer.getName());
+        sender.sendMessage("Balance of " + targetPlayer.getName() + " set to $" + amount);
 
         return true;
     }
