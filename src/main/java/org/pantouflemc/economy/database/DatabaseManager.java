@@ -84,10 +84,12 @@ public class DatabaseManager {
             Statement statement = this.connection.createStatement();
 
             // Create the accounts table
-            statement.execute("CREATE TABLE IF NOT EXISTS accounts ("
-                    + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                    + "balance DOUBLE NOT NULL"
-                    + ");");
+            statement.execute("""
+                    CREATE TABLE IF NOT EXISTS accounts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        balance DOUBLE NOT NULL
+                    );
+                    """);
 
             // Create the players name - uuid relation table
             statement.execute("""
@@ -98,18 +100,19 @@ public class DatabaseManager {
                     """);
 
             // Create the players - accounts relation table
-            statement.execute("CREATE TABLE IF NOT EXISTS players_accounts ("
-                    + "player_uuid VARCHAR(32),"
-                    + "account_id INTEGER,"
-                    + "main BOOLEAN DEFAULT FALSE,"
-                    + "PRIMARY KEY (player_uuid, account_id),"
-                    + "FOREIGN KEY (player_uuid) REFERENCES players(player_uuid),"
-                    + "FOREIGN KEY (account_id) REFERENCES accounts(id),"
-                    + "UNIQUE (player_uuid, account_id)"
-                    + ");"
-                    + "CREATE UNIQUE INDEX IF NOT EXISTS player_uuid_index"
-                    + "ON players_accounts (player_uuid, account_id)"
-                    + "WHERE main = TRUE;");
+            statement.execute("""
+                    CREATE TABLE IF NOT EXISTS players_accounts (
+                        player_uuid VARCHAR(32),
+                        account_id INTEGER,
+                        main BOOLEAN DEFAULT FALSE,
+                        PRIMARY KEY (player_uuid, account_id),
+                        FOREIGN KEY (player_uuid) REFERENCES players(player_uuid),
+                        FOREIGN KEY (account_id) REFERENCES accounts(id),
+                        UNIQUE (player_uuid, account_id)
+                    );
+                    CREATE UNIQUE INDEX IF NOT EXISTS player_uuid_index
+                    ON players_accounts (player_uuid, account_id) WHERE main = TRUE;
+                    """);
 
             statement.close();
 
