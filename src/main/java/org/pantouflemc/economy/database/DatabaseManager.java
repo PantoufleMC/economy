@@ -171,6 +171,31 @@ public class DatabaseManager {
     }
 
     /**
+     * Add a player to the database
+     *
+     * @param playerUuid the UUID of the player
+     * @param playerName the name of the player
+     */
+    public Result<Void, DatabaseError> addPlayer(UUID playerUuid, String playerName) {
+        try {
+            String query = "INSERT INTO players (player_uuid, player_name) VALUES (?, ?);";
+            PreparedStatement statement = this.connection.prepareStatement(query);
+            statement.setString(1, playerUuid.toString());
+            statement.setString(2, playerName);
+
+            int affectedRows = statement.executeUpdate();
+
+            if (affectedRows == 0) {
+                return Result.err(DatabaseError.UNKNOWN_ERROR);
+            }
+
+            return Result.ok(null);
+        } catch (SQLException e) {
+            return Result.err(DatabaseError.UNKNOWN_ERROR);
+        }
+    }
+
+    /**
      * Create a new player account relation
      *
      * @param playerUuid the UUID of the player
