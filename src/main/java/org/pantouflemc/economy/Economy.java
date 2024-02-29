@@ -15,6 +15,7 @@ import org.pantouflemc.economy.commands.EconomyPay;
 import org.pantouflemc.economy.commands.EconomySet;
 import org.pantouflemc.economy.commands.EconomyAdd;
 import org.pantouflemc.economy.commands.EconomyRemove;
+import org.pantouflemc.economy.commands.EconomyTop;
 
 import com.google.common.primitives.UnsignedInteger;
 import com.hubspot.algebra.Result;
@@ -42,7 +43,7 @@ public final class Economy extends JavaPlugin {
         this.getCommand("economy.set").setExecutor(new EconomySet(this));
         this.getCommand("economy.add").setExecutor(new EconomyAdd(this));
         this.getCommand("economy.remove").setExecutor(new EconomyRemove(this));
-        this.getCommand("economy.top").setExecutor(new org.pantouflemc.economy.commands.EconomyTop());
+        this.getCommand("economy.top").setExecutor(new EconomyTop(this));
     }
 
     @Override
