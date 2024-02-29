@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -365,6 +366,20 @@ public final class Economy extends JavaPlugin {
      */
     public Result<List<Integer>, EconomyError> getAccounts(Player player) {
         return databaseManager.getAccounts(player.getUniqueId())
+                .mapErr(error -> EconomyError.valueOf(error));
+    }
+
+    /**
+     * Get the top player accounts.
+     * 
+     * @param limit  the maximum number of accounts to return
+     * @param offset the number of accounts to skip
+     * @return
+     */
+    public Result<List<ImmutablePair<String, Double>>, EconomyError> getTopPlayerAccounts(
+            int limit,
+            int offset) {
+        return databaseManager.getTopPlayerAccounts(limit, offset)
                 .mapErr(error -> EconomyError.valueOf(error));
     }
 
