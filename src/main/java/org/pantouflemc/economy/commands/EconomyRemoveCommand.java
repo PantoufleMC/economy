@@ -9,9 +9,9 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 import org.pantouflemc.economy.Economy;
-import org.pantouflemc.economy.EconomyError;
-
-import com.hubspot.algebra.Result;
+import org.pantouflemc.economy.exceptions.EconomyAccountNotFoundError;
+import org.pantouflemc.economy.exceptions.EconomyInsufficientBalance;
+import org.pantouflemc.economy.exceptions.EconomyInvalidAmountError;
 
 public class EconomyRemoveCommand extends EconomyCommandExecutor {
 
@@ -33,31 +33,28 @@ public class EconomyRemoveCommand extends EconomyCommandExecutor {
             @Nullable
             OfflinePlayer targetPlayer = sender.getServer().getOfflinePlayerIfCached(targetName);
             if (targetPlayer == null) {
-                sender.sendMessage("Target not found");
-                return false;
+                throw new EconomyAccountNotFoundError();
             }
 
-            Result<Void, EconomyError> result = Economy.getPlugin().removeBalance(targetPlayer.getUniqueId(), amount);
-
-            if (result.isErr()) {
-                switch (result.unwrapErrOrElseThrow()) {
-                    case INVALID_AMOUNT:
-                        sender.sendMessage("Amount must be positive");
-                        break;
-                    case INSUFFICIENT_BALANCE:
-                        sender.sendMessage("Player does not have enough balance");
-                        break;
-                    default:
-                        sender.sendMessage("An error occurred");
-                        break;
-                }
-                return false;
-            }
+            Economy.getPlugin().removeBalance(targetPlayer.getUniqueId(), amount);
 
             sender.sendMessage("$" + amount + " removed from the balance of " + targetPlayer.getName());
 
             return true;
+        } catch (EconomyAccountNotFoundError e) {
+            sender.sendMessage("Target not found");
+            return false;
+        } catch (EconomyInsufficientBalance e) {
+            sender.sendMessage("Player does not have enough balance");
+            return false;
+        } catch (EconomyInvalidAmountError e) {
+            sender.sendMessage("Amount must be positive");
+            return false;
         } catch (NumberFormatException e) {
+            sender.sendMessage("Invalid amount");
+            return false;
+        } catch (Exception e) {
+            sender.sendMessage("An error occurred");
             return false;
         }
     }
