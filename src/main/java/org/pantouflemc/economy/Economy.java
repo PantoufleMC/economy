@@ -17,8 +17,13 @@ import org.pantouflemc.economy.commands.EconomyPayCommand;
 import org.pantouflemc.economy.commands.EconomyRemoveCommand;
 import org.pantouflemc.economy.commands.EconomySetCommand;
 import org.pantouflemc.economy.commands.EconomyTopCommand;
-import org.pantouflemc.economy.database.DatabaseError;
 import org.pantouflemc.economy.database.DatabaseManager;
+import org.pantouflemc.economy.exceptions.EconomyAccountNotFoundError;
+import org.pantouflemc.economy.exceptions.EconomyDatabaseDisconnectionError;
+import org.pantouflemc.economy.exceptions.EconomyDatabaseError;
+import org.pantouflemc.economy.exceptions.EconomyDriverNotFoundException;
+import org.pantouflemc.economy.exceptions.EconomyInsufficientBalance;
+import org.pantouflemc.economy.exceptions.EconomyInvalidAmountError;
 import org.pantouflemc.economy.listeners.PlayerListener;
 
 import com.google.common.primitives.UnsignedInteger;
@@ -34,7 +39,11 @@ public final class Economy extends JavaPlugin {
     public void onEnable() {
         plugin = this;
         logger = this.getLogger();
-        databaseManager = new DatabaseManager();
+        try {
+            databaseManager = new DatabaseManager();
+        } catch (EconomyDriverNotFoundException | EconomyDatabaseError e) {
+            throw new RuntimeException(e);
+        }
 
         // Register listeners
         PluginManager pluginManager = this.getServer().getPluginManager();
@@ -60,8 +69,11 @@ public final class Economy extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        databaseManager.disconnect().ifErr(
-                error -> logger.warning(error.toString()));
+        try {
+            databaseManager.disconnect();
+        } catch (EconomyDatabaseDisconnectionError e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -100,9 +112,12 @@ public final class Economy extends JavaPlugin {
      * @return The ID of the new account.
      */
     public Result<Integer, EconomyError> createAccount() {
-        return databaseManager.createAccount()
-                .mapErr(error -> EconomyError.valueOf(error))
-                .mapOk(accountId -> accountId.intValue());
+        try {
+            var accountId = databaseManager.createAccount();
+            return Result.ok(accountId.intValue());
+        } catch (EconomyDatabaseError e) {
+            return Result.err(EconomyError.UNKNOWN_ERROR);
+        }
     }
 
     /**
@@ -121,15 +136,15 @@ public final class Economy extends JavaPlugin {
 
         Integer accountId = result1.unwrapOrElseThrow();
 
-        Result<Void, DatabaseError> result2 = databaseManager.createPlayerAccountRelation(
-                playerUuid,
-                UnsignedInteger.valueOf(accountId),
-                main);
-
-        if (result2.isErr()) {
-            return result2
-                    .mapErr(error -> EconomyError.valueOf(error))
-                    .mapOk(success -> (Integer) null); // Cast to Integer to match return type
+        try {
+            databaseManager.createPlayerAccountRelation(
+                    playerUuid,
+                    UnsignedInteger.valueOf(accountId),
+                    main);
+        } catch (EconomyAccountNotFoundError e) {
+            return Result.err(EconomyError.ACCOUNT_NOT_FOUND);
+        } catch (EconomyDatabaseError e) {
+            return Result.err(EconomyError.UNKNOWN_ERROR);
         }
 
         return Result.ok(accountId);
@@ -152,8 +167,15 @@ public final class Economy extends JavaPlugin {
      * @param accountId The ID of the account to delete.
      */
     public Result<Void, EconomyError> deleteAccount(int accountId) {
-        return databaseManager.deleteAccount(UnsignedInteger.valueOf(accountId))
-                .mapErr(error -> EconomyError.valueOf(error));
+        try {
+            databaseManager.deleteAccount(UnsignedInteger.valueOf(accountId));
+        } catch (EconomyAccountNotFoundError e) {
+            return Result.err(EconomyError.ACCOUNT_NOT_FOUND);
+        } catch (EconomyDatabaseError e) {
+            return Result.err(EconomyError.UNKNOWN_ERROR);
+        }
+
+        return Result.ok(null);
     }
 
     /**
@@ -163,11 +185,18 @@ public final class Economy extends JavaPlugin {
      * @param accountId  The ID of the account to add the player to.
      */
     public Result<Void, EconomyError> addPlayerToAccount(UUID playerUuid, int accountId) {
-        return databaseManager.createPlayerAccountRelation(
-                playerUuid,
-                UnsignedInteger.valueOf(accountId),
-                false)
-                .mapErr(error -> EconomyError.valueOf(error));
+        try {
+            databaseManager.createPlayerAccountRelation(
+                    playerUuid,
+                    UnsignedInteger.valueOf(accountId),
+                    false);
+        } catch (EconomyAccountNotFoundError e) {
+            return Result.err(EconomyError.ACCOUNT_NOT_FOUND);
+        } catch (EconomyDatabaseError e) {
+            return Result.err(EconomyError.UNKNOWN_ERROR);
+        }
+
+        return Result.ok(null);
     }
 
     /**
@@ -187,8 +216,15 @@ public final class Economy extends JavaPlugin {
      * @param accountId  The ID of the account to remove the player from.
      */
     public Result<Void, EconomyError> removePlayerFromAccount(UUID playerUuid, int accountId) {
-        return databaseManager.deletePlayerAccountRelation(playerUuid, UnsignedInteger.valueOf(accountId))
-                .mapErr(error -> EconomyError.valueOf(error));
+        try {
+            databaseManager.deletePlayerAccountRelation(playerUuid, UnsignedInteger.valueOf(accountId));
+        } catch (EconomyAccountNotFoundError e) {
+            return Result.err(EconomyError.ACCOUNT_NOT_FOUND);
+        } catch (EconomyDatabaseError e) {
+            return Result.err(EconomyError.UNKNOWN_ERROR);
+        }
+
+        return Result.ok(null);
     }
 
     /**
@@ -209,11 +245,27 @@ public final class Economy extends JavaPlugin {
      * @param amount     The amount of money to transfer.
      */
     public Result<Void, EconomyError> transferMoney(int accountId1, int accountId2, double amount) {
-        return databaseManager.removeBalance(UnsignedInteger.valueOf(accountId1), amount)
-                .match(
-                        error -> Result.err(error).mapOk(success -> (Void) null), // Cast to Void to match return type
-                        success -> databaseManager.addBalance(UnsignedInteger.valueOf(accountId2), amount))
-                .mapErr(error -> EconomyError.valueOf(error));
+        try {
+            databaseManager.removeBalance(UnsignedInteger.valueOf(accountId1), amount);
+        } catch (EconomyInsufficientBalance e) {
+            return Result.err(EconomyError.INSUFFICIENT_BALANCE);
+        } catch (EconomyInvalidAmountError e) {
+            return Result.err(EconomyError.INVALID_AMOUNT);
+        } catch (EconomyDatabaseError e) {
+            return Result.err(EconomyError.UNKNOWN_ERROR);
+        }
+
+        try {
+            databaseManager.addBalance(UnsignedInteger.valueOf(accountId2), amount);
+        } catch (EconomyAccountNotFoundError e) {
+            return Result.err(EconomyError.ACCOUNT_NOT_FOUND);
+        } catch (EconomyInvalidAmountError e) {
+            return Result.err(EconomyError.INVALID_AMOUNT);
+        } catch (EconomyDatabaseError e) {
+            return Result.err(EconomyError.UNKNOWN_ERROR);
+        }
+
+        return Result.ok(null);
     }
 
     /**
@@ -224,19 +276,15 @@ public final class Economy extends JavaPlugin {
      * @param amount      The amount of money to transfer.
      */
     public Result<Void, EconomyError> transferMoney(UUID playerUuid1, UUID playerUuid2, double amount) {
-        Result<Integer, DatabaseError> result1 = databaseManager.getMainAccount(playerUuid1);
-        Result<Integer, DatabaseError> result2 = databaseManager.getMainAccount(playerUuid2);
+        Result<Integer, EconomyError> result1 = this.getMainAccount(playerUuid1);
+        Result<Integer, EconomyError> result2 = this.getMainAccount(playerUuid2);
 
         if (result1.isErr()) {
-            return result1
-                    .mapErr(error -> EconomyError.valueOf(error))
-                    .mapOk(success -> (Void) null); // Cast to Void to match return type
+            return result1.mapOk(success -> (Void) null); // Cast to Void to match return type
         }
 
         if (result2.isErr()) {
-            return result2
-                    .mapErr(error -> EconomyError.valueOf(error))
-                    .mapOk(success -> (Void) null); // Cast to Void to match return type
+            return result2.mapOk(success -> (Void) null); // Cast to Void to match return type
         }
 
         Integer accountId1 = result1.unwrapOrElseThrow();
@@ -263,8 +311,13 @@ public final class Economy extends JavaPlugin {
      * @return The balance of the account.
      */
     public Result<Double, EconomyError> getBalance(int accountId) {
-        return databaseManager.getBalance(UnsignedInteger.valueOf(accountId))
-                .mapErr(error -> EconomyError.valueOf(error));
+        try {
+            return Result.ok(databaseManager.getBalance(UnsignedInteger.valueOf(accountId)));
+        } catch (EconomyAccountNotFoundError e) {
+            return Result.err(EconomyError.ACCOUNT_NOT_FOUND);
+        } catch (EconomyDatabaseError e) {
+            return Result.err(EconomyError.UNKNOWN_ERROR);
+        }
     }
 
     /**
@@ -274,8 +327,8 @@ public final class Economy extends JavaPlugin {
      * @return The balance of the player.
      */
     public Result<Double, EconomyError> getBalance(UUID playerUuid) {
-        return databaseManager.getMainAccount(playerUuid).match(
-                error -> Result.err(EconomyError.valueOf(error)),
+        return this.getMainAccount(playerUuid).match(
+                error -> Result.err(error),
                 accountId -> this.getBalance(accountId));
     }
 
@@ -296,8 +349,17 @@ public final class Economy extends JavaPlugin {
      * @param amount    The new balance of the account.
      */
     public Result<Void, EconomyError> setBalance(int accountId, double amount) {
-        return databaseManager.setBalance(UnsignedInteger.valueOf(accountId), amount)
-                .mapErr(error -> EconomyError.valueOf(error));
+        try {
+            databaseManager.setBalance(UnsignedInteger.valueOf(accountId), amount);
+        } catch (EconomyInvalidAmountError e) {
+            return Result.err(EconomyError.INVALID_AMOUNT);
+        } catch (EconomyAccountNotFoundError e) {
+            return Result.err(EconomyError.ACCOUNT_NOT_FOUND);
+        } catch (EconomyDatabaseError e) {
+            return Result.err(EconomyError.UNKNOWN_ERROR);
+        }
+
+        return Result.ok(null);
     }
 
     /**
@@ -307,8 +369,8 @@ public final class Economy extends JavaPlugin {
      * @param amount     The new balance of the player.
      */
     public Result<Void, EconomyError> setBalance(UUID playerUuid, double amount) {
-        return databaseManager.getMainAccount(playerUuid).match(
-                error -> Result.err(EconomyError.valueOf(error)),
+        return this.getMainAccount(playerUuid).match(
+                error -> Result.err(error),
                 accountId -> this.setBalance(accountId, amount));
     }
 
@@ -329,8 +391,17 @@ public final class Economy extends JavaPlugin {
      * @param amount    The amount of money to add.
      */
     public Result<Void, EconomyError> addBalance(int accountId, double amount) {
-        return databaseManager.addBalance(UnsignedInteger.valueOf(accountId), amount)
-                .mapErr(error -> EconomyError.valueOf(error));
+        try {
+            databaseManager.addBalance(UnsignedInteger.valueOf(accountId), amount);
+        } catch (EconomyInvalidAmountError e) {
+            return Result.err(EconomyError.INVALID_AMOUNT);
+        } catch (EconomyAccountNotFoundError e) {
+            return Result.err(EconomyError.ACCOUNT_NOT_FOUND);
+        } catch (EconomyDatabaseError e) {
+            return Result.err(EconomyError.UNKNOWN_ERROR);
+        }
+
+        return Result.ok(null);
     }
 
     /**
@@ -340,8 +411,8 @@ public final class Economy extends JavaPlugin {
      * @param amount     The amount of money to add.
      */
     public Result<Void, EconomyError> addBalance(UUID playerUuid, double amount) {
-        return databaseManager.getMainAccount(playerUuid).match(
-                error -> Result.err(EconomyError.valueOf(error)),
+        return this.getMainAccount(playerUuid).match(
+                error -> Result.err(error),
                 accountId -> this.addBalance(accountId, amount));
     }
 
@@ -362,8 +433,17 @@ public final class Economy extends JavaPlugin {
      * @param amount    The amount of money to remove.
      */
     public Result<Void, EconomyError> removeBalance(int accountId, double amount) {
-        return databaseManager.removeBalance(UnsignedInteger.valueOf(accountId), amount)
-                .mapErr(error -> EconomyError.valueOf(error));
+        try {
+            databaseManager.removeBalance(UnsignedInteger.valueOf(accountId), amount);
+        } catch (EconomyInsufficientBalance e) {
+            return Result.err(EconomyError.INSUFFICIENT_BALANCE);
+        } catch (EconomyInvalidAmountError e) {
+            return Result.err(EconomyError.INVALID_AMOUNT);
+        } catch (EconomyDatabaseError e) {
+            return Result.err(EconomyError.UNKNOWN_ERROR);
+        }
+
+        return Result.ok(null);
     }
 
     /**
@@ -373,8 +453,8 @@ public final class Economy extends JavaPlugin {
      * @param amount     The amount of money to remove.
      */
     public Result<Void, EconomyError> removeBalance(UUID playerUuid, double amount) {
-        return databaseManager.getMainAccount(playerUuid).match(
-                error -> Result.err(EconomyError.valueOf(error)),
+        return this.getMainAccount(playerUuid).match(
+                error -> Result.err(error),
                 accountId -> this.removeBalance(accountId, amount));
     }
 
@@ -395,8 +475,11 @@ public final class Economy extends JavaPlugin {
      * @return A list of UUIDs of the players in the account.
      */
     public Result<List<UUID>, EconomyError> getPlayers(int accountId) {
-        return databaseManager.getPlayers(UnsignedInteger.valueOf(accountId))
-                .mapErr(error -> EconomyError.valueOf(error));
+        try {
+            return Result.ok(databaseManager.getPlayers(UnsignedInteger.valueOf(accountId)));
+        } catch (EconomyDatabaseError e) {
+            return Result.err(EconomyError.UNKNOWN_ERROR);
+        }
     }
 
     /**
@@ -406,8 +489,11 @@ public final class Economy extends JavaPlugin {
      * @return A list of account IDs of the player.
      */
     public Result<List<Integer>, EconomyError> getAccounts(Player player) {
-        return databaseManager.getAccounts(player.getUniqueId())
-                .mapErr(error -> EconomyError.valueOf(error));
+        try {
+            return Result.ok(databaseManager.getAccounts(player.getUniqueId()));
+        } catch (EconomyDatabaseError e) {
+            return Result.err(EconomyError.UNKNOWN_ERROR);
+        }
     }
 
     /**
@@ -420,8 +506,27 @@ public final class Economy extends JavaPlugin {
     public Result<List<ImmutablePair<String, Double>>, EconomyError> getTopPlayerAccounts(
             int limit,
             int offset) {
-        return databaseManager.getTopPlayerAccounts(limit, offset)
-                .mapErr(error -> EconomyError.valueOf(error));
+        try {
+            return Result.ok(databaseManager.getTopPlayerAccounts(limit, offset));
+        } catch (EconomyDatabaseError e) {
+            return Result.err(EconomyError.UNKNOWN_ERROR);
+        }
+    }
+
+    /**
+     * Get the main account of a player.
+     * 
+     * @param playerUuid The UUID of the player to get the main account of.
+     * @return The ID of the main account of the player.
+     */
+    public Result<Integer, EconomyError> getMainAccount(UUID playerUuid) {
+        try {
+            return Result.ok(databaseManager.getMainAccount(playerUuid).intValue());
+        } catch (EconomyAccountNotFoundError e) {
+            return Result.err(EconomyError.ACCOUNT_NOT_FOUND);
+        } catch (EconomyDatabaseError e) {
+            return Result.err(EconomyError.UNKNOWN_ERROR);
+        }
     }
 
     /**
@@ -431,9 +536,7 @@ public final class Economy extends JavaPlugin {
      * @return The ID of the main account of the player.
      */
     public Result<Integer, EconomyError> getMainAccount(Player player) {
-        return databaseManager.getMainAccount(player.getUniqueId())
-                .mapErr(error -> EconomyError.valueOf(error))
-                .mapOk(accountId -> accountId.intValue());
+        return this.getMainAccount(player.getUniqueId());
     }
 
 }
