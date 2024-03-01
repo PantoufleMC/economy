@@ -12,24 +12,33 @@ import java.util.List;
 import java.util.UUID;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.jetbrains.annotations.NotNull;
+import org.pantouflemc.economy.exceptions.EconomyDriverNotFoundException;
+import org.pantouflemc.economy.exceptions.EconomyInsufficientBalance;
+import org.pantouflemc.economy.exceptions.EconomyInvalidAmountError;
+import org.pantouflemc.economy.exceptions.EconomyDatabaseError;
+import org.pantouflemc.economy.exceptions.EconomyAccountNotFoundError;
+import org.pantouflemc.economy.exceptions.EconomyDatabaseConnectionError;
+import org.pantouflemc.economy.exceptions.EconomyDatabaseDisconnectionError;
 
 import com.google.common.primitives.UnsignedInteger;
-import com.hubspot.algebra.Result;
 
 public class DatabaseManager {
 
     private Connection connection;
 
-    public DatabaseManager() {
-        connect().ifErr(error -> {
-            throw new RuntimeException("Failed to connect to the database: " + error);
-        });
+    /**
+     * Create a new DatabaseManager
+     */
+    public DatabaseManager() throws EconomyDriverNotFoundException, EconomyDatabaseError,
+            EconomyDatabaseConnectionError {
+        connect();
     }
 
     /**
      * Connect to the database
      */
-    private Result<Void, DatabaseError> connect() {
+    private void connect() throws EconomyDriverNotFoundException, EconomyDatabaseError, EconomyDatabaseConnectionError {
         // TODO: Change SQLite to PostgreSQL
         File databaseDirectory = new File("plugins/Economy");
         File databaseFile = new File(databaseDirectory, "database.db");
@@ -39,47 +48,38 @@ public class DatabaseManager {
             databaseDirectory.mkdirs();
         }
 
-        // Register Driver Class, this should never fail
         try {
+            // Register SQLite Driver
             Class.forName("org.sqlite.JDBC");
-        } catch (ClassNotFoundException e) {
-            // Driver class not found
-            e.printStackTrace();
-            return Result.err(DatabaseError.UNKNOWN_ERROR);
-        }
 
-        // Connect to the database
-        try {
+            // Connect to the database
             connection = DriverManager.getConnection("jdbc:sqlite:" + databaseFile.getPath());
+        } catch (ClassNotFoundException e) {
+            throw new EconomyDriverNotFoundException();
         } catch (SQLException e) {
-            e.printStackTrace();
-            return Result.err(DatabaseError.CONNECTION_ERROR);
+            throw new EconomyDatabaseConnectionError();
         }
 
         // Initialize the database
-        return initialization();
+        initialization();
     }
 
     /**
      * Disconnect from the database
      */
-    public Result<Void, DatabaseError> disconnect() {
+    public void disconnect() throws EconomyDatabaseDisconnectionError {
         try {
-            if (connection != null) {
+            if (connection != null)
                 connection.close();
-            }
-
-            return Result.ok(null);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return Result.err(DatabaseError.CONNECTION_ERROR);
+        } catch (SQLException e) {
+            throw new EconomyDatabaseDisconnectionError();
         }
     }
 
     /**
      * Initialize the database
      */
-    private Result<Void, DatabaseError> initialization() {
+    private void initialization() throws EconomyDatabaseError {
         try {
             Statement statement = this.connection.createStatement();
 
@@ -115,11 +115,8 @@ public class DatabaseManager {
                     """);
 
             statement.close();
-
-            return Result.ok(null);
         } catch (SQLException e) {
-            e.printStackTrace();
-            return Result.err(DatabaseError.CONNECTION_ERROR);
+            throw new EconomyDatabaseError();
         }
     }
 
@@ -128,7 +125,7 @@ public class DatabaseManager {
      *
      * @return the ID of the new account
      */
-    public Result<UnsignedInteger, DatabaseError> createAccount() {
+    public @NotNull UnsignedInteger createAccount() throws EconomyDatabaseError {
         try {
             String query = "INSERT INTO accounts (balance) VALUES (0.0);";
             PreparedStatement statement = this.connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
@@ -137,18 +134,18 @@ public class DatabaseManager {
 
             if (affectedRows == 0) {
                 // Should never happen
-                return Result.err(DatabaseError.UNKNOWN_ERROR);
+                throw new EconomyDatabaseError();
             }
 
             ResultSet generatedKeys = statement.getGeneratedKeys();
 
             if (generatedKeys.next()) {
-                return Result.ok(UnsignedInteger.valueOf(generatedKeys.getInt(1)));
+                return UnsignedInteger.valueOf(generatedKeys.getInt(1));
             }
 
-            return Result.err(DatabaseError.UNKNOWN_ERROR);
+            throw new EconomyDatabaseError();
         } catch (SQLException e) {
-            return Result.err(DatabaseError.UNKNOWN_ERROR);
+            throw new EconomyDatabaseError();
         }
     }
 
@@ -157,7 +154,7 @@ public class DatabaseManager {
      *
      * @param id the ID of the account
      */
-    public Result<Void, DatabaseError> deleteAccount(UnsignedInteger accountId) {
+    public void deleteAccount(UnsignedInteger accountId) throws EconomyAccountNotFoundError, EconomyDatabaseError {
         try {
             String query = "DELETE FROM accounts WHERE id = ?;";
             PreparedStatement statement = this.connection.prepareStatement(query);
@@ -166,12 +163,10 @@ public class DatabaseManager {
             int affectedRows = statement.executeUpdate();
 
             if (affectedRows == 0) {
-                return Result.err(DatabaseError.ACCOUNT_NOT_FOUND);
+                throw new EconomyAccountNotFoundError();
             }
-
-            return Result.ok(null);
         } catch (SQLException e) {
-            return Result.err(DatabaseError.UNKNOWN_ERROR);
+            throw new EconomyDatabaseError();
         }
     }
 
@@ -181,7 +176,7 @@ public class DatabaseManager {
      * @param playerUuid the UUID of the player
      * @param playerName the name of the player
      */
-    public Result<Void, DatabaseError> addPlayer(UUID playerUuid, String playerName) {
+    public void addPlayer(UUID playerUuid, String playerName) throws EconomyDatabaseError {
         try {
             String query = "INSERT INTO players (player_uuid, player_name) VALUES (?, ?);";
             PreparedStatement statement = this.connection.prepareStatement(query);
@@ -191,12 +186,10 @@ public class DatabaseManager {
             int affectedRows = statement.executeUpdate();
 
             if (affectedRows == 0) {
-                return Result.err(DatabaseError.UNKNOWN_ERROR);
+                throw new EconomyDatabaseError();
             }
-
-            return Result.ok(null);
         } catch (SQLException e) {
-            return Result.err(DatabaseError.UNKNOWN_ERROR);
+            throw new EconomyDatabaseError();
         }
     }
 
@@ -207,10 +200,8 @@ public class DatabaseManager {
      * @param accountId  the ID of the account
      * @param main       whether the account is the main account of the player
      */
-    public Result<Void, DatabaseError> createPlayerAccountRelation(
-            UUID playerUuid,
-            UnsignedInteger accountId,
-            boolean main) {
+    public void createPlayerAccountRelation(UUID playerUuid, UnsignedInteger accountId, boolean main)
+            throws EconomyAccountNotFoundError, EconomyDatabaseError {
         try {
             String query = main
                     ? "INSERT INTO players_accounts (player_uuid, account_id, main) VALUES (?, ?, ?);"
@@ -226,12 +217,10 @@ public class DatabaseManager {
             int affectedRows = statement.executeUpdate();
 
             if (affectedRows == 0) {
-                return Result.err(DatabaseError.ACCOUNT_NOT_FOUND);
+                throw new EconomyAccountNotFoundError();
             }
-
-            return Result.ok(null);
         } catch (SQLException e) {
-            return Result.err(DatabaseError.UNKNOWN_ERROR);
+            throw new EconomyDatabaseError();
         }
     }
 
@@ -242,7 +231,8 @@ public class DatabaseManager {
      * @param playerUuid the UUID of the player
      * @param accountId  the ID of the account
      */
-    public Result<Void, DatabaseError> deletePlayerAccountRelation(UUID playerUuid, UnsignedInteger accountId) {
+    public void deletePlayerAccountRelation(UUID playerUuid, UnsignedInteger accountId)
+            throws EconomyAccountNotFoundError, EconomyDatabaseError {
         try {
             String query = """
                     DELETE FROM players_accounts WHERE player_uuid = ? AND account_id = ?;
@@ -257,12 +247,10 @@ public class DatabaseManager {
             int affectedRows = statement.executeUpdate();
 
             if (affectedRows == 0) {
-                return Result.err(DatabaseError.ACCOUNT_NOT_FOUND);
+                throw new EconomyAccountNotFoundError();
             }
-
-            return Result.ok(null);
         } catch (SQLException e) {
-            return Result.err(DatabaseError.UNKNOWN_ERROR);
+            throw new EconomyDatabaseError();
         }
     }
 
@@ -272,7 +260,8 @@ public class DatabaseManager {
      * @param accountId the ID of the account
      * @return the balance of the account
      */
-    public Result<Double, DatabaseError> getBalance(UnsignedInteger accountId) {
+    public @NotNull double getBalance(UnsignedInteger accountId) throws EconomyAccountNotFoundError,
+            EconomyDatabaseError {
         try {
             String query = "SELECT balance FROM accounts WHERE id = ?;";
             PreparedStatement statement = connection.prepareStatement(query);
@@ -281,12 +270,12 @@ public class DatabaseManager {
             ResultSet resultSet = statement.executeQuery();
 
             if (resultSet.next()) {
-                return Result.ok(resultSet.getDouble("balance"));
+                return resultSet.getDouble("balance");
             }
 
-            return Result.err(DatabaseError.ACCOUNT_NOT_FOUND);
+            throw new EconomyAccountNotFoundError();
         } catch (SQLException e) {
-            return Result.err(DatabaseError.UNKNOWN_ERROR);
+            throw new EconomyDatabaseError();
         }
     }
 
@@ -296,9 +285,10 @@ public class DatabaseManager {
      * @param accountId the ID of the account
      * @param balance   the new balance of the account (must be positive)
      */
-    public Result<Void, DatabaseError> setBalance(UnsignedInteger accountId, double balance) {
+    public void setBalance(UnsignedInteger accountId, double balance) throws EconomyInvalidAmountError,
+            EconomyAccountNotFoundError, EconomyDatabaseError {
         if (balance < 0) {
-            return Result.err(DatabaseError.INVALID_AMOUNT);
+            throw new EconomyInvalidAmountError();
         }
 
         try {
@@ -310,12 +300,10 @@ public class DatabaseManager {
             int affectedRows = statement.executeUpdate();
 
             if (affectedRows == 0) {
-                return Result.err(DatabaseError.ACCOUNT_NOT_FOUND);
+                throw new EconomyAccountNotFoundError();
             }
-
-            return Result.ok(null);
         } catch (SQLException e) {
-            return Result.err(DatabaseError.UNKNOWN_ERROR);
+            throw new EconomyDatabaseError();
         }
     }
 
@@ -325,9 +313,10 @@ public class DatabaseManager {
      * @param accountId the ID of the account
      * @param amount    the amount to add (must be positive)
      */
-    public Result<Void, DatabaseError> addBalance(UnsignedInteger accountId, double amount) {
+    public void addBalance(UnsignedInteger accountId, double amount) throws EconomyInvalidAmountError,
+            EconomyAccountNotFoundError, EconomyDatabaseError {
         if (amount < 0) {
-            return Result.err(DatabaseError.INVALID_AMOUNT);
+            throw new EconomyInvalidAmountError();
         }
 
         try {
@@ -339,12 +328,10 @@ public class DatabaseManager {
             int affectedRows = statement.executeUpdate();
 
             if (affectedRows == 0) {
-                return Result.err(DatabaseError.ACCOUNT_NOT_FOUND);
+                throw new EconomyAccountNotFoundError();
             }
-
-            return Result.ok(null);
         } catch (SQLException e) {
-            return Result.err(DatabaseError.UNKNOWN_ERROR);
+            throw new EconomyDatabaseError();
         }
     }
 
@@ -354,9 +341,10 @@ public class DatabaseManager {
      * @param accountId the ID of the account
      * @param amount    the amount to remove (must be positive)
      */
-    public Result<Void, DatabaseError> removeBalance(UnsignedInteger accountId, double amount) {
+    public void removeBalance(UnsignedInteger accountId, double amount) throws EconomyInsufficientBalance,
+            EconomyInvalidAmountError, EconomyDatabaseError {
         if (amount < 0) {
-            return Result.err(DatabaseError.INVALID_AMOUNT);
+            throw new EconomyInvalidAmountError();
         }
 
         try {
@@ -373,13 +361,11 @@ public class DatabaseManager {
                 // having enough balance, so we return ACCOUNT_HAS_NOT_ENOUGH_BALANCE in both
                 // cases in the hope that the caller will give a correct account ID
 
-                // return Result.err(DatabaseError.ACCOUNT_NOT_FOUND);
-                return Result.err(DatabaseError.ACCOUNT_HAS_NOT_ENOUGH_BALANCE);
+                // throw new EconomyAccountNotFoundError();
+                throw new EconomyInsufficientBalance();
             }
-
-            return Result.ok(null);
         } catch (SQLException e) {
-            return Result.err(DatabaseError.UNKNOWN_ERROR);
+            throw new EconomyDatabaseError();
         }
     }
 
@@ -389,7 +375,7 @@ public class DatabaseManager {
      * @param accountId the ID of the account
      * @return the UUIDs of the players associated with the account
      */
-    public Result<List<UUID>, DatabaseError> getPlayers(UnsignedInteger accountId) {
+    public @NotNull List<UUID> getPlayers(UnsignedInteger accountId) throws EconomyDatabaseError {
         try {
             String query = "SELECT player_uuid FROM players_accounts WHERE account_id = ?;";
             PreparedStatement statement = connection.prepareStatement(query);
@@ -405,9 +391,9 @@ public class DatabaseManager {
 
             // We can't distinguish between the account not existing and the account not
             // having any players, so we return an empty list in both cases
-            return Result.ok(players);
+            return players;
         } catch (SQLException e) {
-            return Result.err(DatabaseError.UNKNOWN_ERROR);
+            throw new EconomyDatabaseError();
         }
     }
 
@@ -417,7 +403,7 @@ public class DatabaseManager {
      * @param playerUuid the UUID of the player
      * @return the IDs of the accounts associated with the player
      */
-    public Result<List<Integer>, DatabaseError> getAccounts(UUID playerUuid) {
+    public @NotNull List<Integer> getAccounts(UUID playerUuid) throws EconomyDatabaseError {
         try {
             String query = "SELECT account_id FROM players_accounts WHERE player_uuid = ?;";
             PreparedStatement statement = connection.prepareStatement(query);
@@ -433,9 +419,9 @@ public class DatabaseManager {
 
             // We can't distinguish between the player not existing and the player not
             // having any accounts, so we return an empty list in both cases
-            return Result.ok(accounts);
+            return accounts;
         } catch (SQLException e) {
-            return Result.err(DatabaseError.UNKNOWN_ERROR);
+            throw new EconomyDatabaseError();
         }
     }
 
@@ -446,9 +432,8 @@ public class DatabaseManager {
      * @param offset the number of accounts to skip
      * @return
      */
-    public Result<List<ImmutablePair<String, Double>>, DatabaseError> getTopPlayerAccounts(
-            int limit,
-            int offset) {
+    public @NotNull List<ImmutablePair<String, Double>> getTopPlayerAccounts(int limit, int offset)
+            throws EconomyDatabaseError {
         try {
             String query = """
                     SELECT player_name, balance FROM players_accounts
@@ -472,9 +457,9 @@ public class DatabaseManager {
                         resultSet.getDouble("balance")));
             }
 
-            return Result.ok(accounts);
+            return accounts;
         } catch (SQLException e) {
-            return Result.err(DatabaseError.UNKNOWN_ERROR);
+            throw new EconomyDatabaseError();
         }
     }
 
@@ -484,7 +469,8 @@ public class DatabaseManager {
      * @param playerUuid the UUID of the player
      * @return the ID of the main account of the player
      */
-    public Result<Integer, DatabaseError> getMainAccount(UUID playerUuid) {
+    public @NotNull UnsignedInteger getMainAccount(UUID playerUuid) throws EconomyAccountNotFoundError,
+            EconomyDatabaseError {
         try {
             String query = "SELECT account_id FROM players_accounts WHERE player_uuid = ? AND main = TRUE;";
             PreparedStatement statement = connection.prepareStatement(query);
@@ -493,12 +479,12 @@ public class DatabaseManager {
             ResultSet resultSet = statement.executeQuery();
 
             if (resultSet.next()) {
-                return Result.ok(resultSet.getInt("account_id"));
+                return UnsignedInteger.valueOf(resultSet.getInt("account_id"));
             }
 
-            return Result.err(DatabaseError.PLAYER_DOESNT_HAVE_ACCOUNT);
+            throw new EconomyAccountNotFoundError();
         } catch (SQLException e) {
-            return Result.err(DatabaseError.UNKNOWN_ERROR);
+            throw new EconomyDatabaseError();
         }
     }
 
@@ -509,7 +495,7 @@ public class DatabaseManager {
      * @param accountId  the ID of the account
      * @return true if the player has the account, false otherwise
      */
-    public Result<Boolean, DatabaseError> hasAccount(UUID playerUuid, UnsignedInteger accountId) {
+    public @NotNull boolean hasAccount(UUID playerUuid, UnsignedInteger accountId) throws EconomyDatabaseError {
         try {
             String query = "SELECT count(*) FROM players_accounts WHERE player_uuid = ? AND account_id = ?;";
             PreparedStatement statement = connection.prepareStatement(query);
@@ -518,9 +504,9 @@ public class DatabaseManager {
 
             ResultSet resultSet = statement.executeQuery();
 
-            return Result.ok(resultSet.getInt(1) > 0);
+            return resultSet.getInt(1) > 0;
         } catch (SQLException e) {
-            return Result.err(DatabaseError.UNKNOWN_ERROR);
+            throw new EconomyDatabaseError();
         }
     }
 }
