@@ -1,5 +1,7 @@
 package org.pantouflemc.economy.commands;
 
+import java.util.List;
+
 import javax.annotation.Nullable;
 
 import org.bukkit.OfflinePlayer;
@@ -58,6 +60,25 @@ public class EconomyRemoveCommand extends EconomyCommandExecutor {
         } catch (NumberFormatException e) {
             return false;
         }
+    }
+
+    @Override
+    public @NotNull List<String> onTabComplete(
+            @NotNull CommandSender sender,
+            @NotNull Command command,
+            @NotNull String alias,
+            @NotNull String[] args) {
+        if (args.length == 1) {
+            return Economy.getPlugin().getServer().getOnlinePlayers().stream()
+                    .map(player -> player.getName())
+                    .toList();
+        }
+
+        if (args.length == 2) {
+            return List.of("100", "1000", "10000");
+        }
+
+        return List.of();
     }
 
 }
