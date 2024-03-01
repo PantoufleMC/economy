@@ -8,9 +8,11 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 import org.pantouflemc.economy.commands.EconomyAddCommand;
 import org.pantouflemc.economy.commands.EconomyBalanceCommand;
 import org.pantouflemc.economy.commands.EconomyCommand;
+import org.pantouflemc.economy.commands.EconomyCommandExecutor;
 import org.pantouflemc.economy.commands.EconomyPayCommand;
 import org.pantouflemc.economy.commands.EconomyRemoveCommand;
 import org.pantouflemc.economy.commands.EconomySetCommand;
@@ -24,13 +26,13 @@ import com.hubspot.algebra.Result;
 
 public final class Economy extends JavaPlugin {
 
-    private static Economy instance;
-    private static Logger logger;
-    private static DatabaseManager databaseManager;
+    private static @NotNull Economy plugin;
+    private static @NotNull Logger logger;
+    private static @NotNull DatabaseManager databaseManager;
 
     @Override
     public void onEnable() {
-        instance = this;
+        plugin = this;
         logger = this.getLogger();
         databaseManager = new DatabaseManager();
 
@@ -39,19 +41,55 @@ public final class Economy extends JavaPlugin {
         pluginManager.registerEvents(new PlayerListener(this, databaseManager), this);
 
         // Register commands
-        var command = new EconomyCommand(this);
-        command.registerSubCommand(new EconomyBalanceCommand(this), this)
-                .registerSubCommand(new EconomyPayCommand(this), this)
-                .registerSubCommand(new EconomySetCommand(this), this)
-                .registerSubCommand(new EconomyAddCommand(this), this)
-                .registerSubCommand(new EconomyRemoveCommand(this), this)
-                .registerSubCommand(new EconomyTopCommand(this), this);
+        var economyCommand = new EconomyCommand();
+        var economyBalanceCommand = new EconomyBalanceCommand();
+        var economyPayCommand = new EconomyPayCommand();
+        var economySetCommand = new EconomySetCommand();
+        var economyAddCommand = new EconomyAddCommand();
+        var economyRemoveCommand = new EconomyRemoveCommand();
+        var economyTopCommand = new EconomyTopCommand();
+
+        this.registerCommand(economyCommand);
+        this.registerSubCommand(economyBalanceCommand, economyCommand);
+        this.registerSubCommand(economyPayCommand, economyCommand);
+        this.registerSubCommand(economySetCommand, economyCommand);
+        this.registerSubCommand(economyAddCommand, economyCommand);
+        this.registerSubCommand(economyRemoveCommand, economyCommand);
+        this.registerSubCommand(economyTopCommand, economyCommand);
     }
 
     @Override
     public void onDisable() {
         databaseManager.disconnect().ifErr(
                 error -> logger.warning(error.toString()));
+    }
+
+    /**
+     * Get the instance of the plugin.
+     */
+    public static Economy getPlugin() {
+        return plugin;
+    }
+
+    /**
+     * Register a command executor.
+     * 
+     * @param executor the executor to register
+     */
+    private void registerCommand(@NotNull EconomyCommandExecutor executor) {
+        Economy.getPlugin().getCommand(executor.getCommandName()).setExecutor(executor);
+    }
+
+    /**
+     * Register a sub-command to a command.
+     * 
+     * @param executor the executor of the sub-command
+     * @param command  the command to register the sub-command to
+     */
+    private void registerSubCommand(@NotNull EconomyCommandExecutor executor, @NotNull EconomyCommand command) {
+        String commandName = command.getCommandName() + "." + executor.getCommandName();
+        Economy.getPlugin().getCommand(commandName).setExecutor(executor);
+        command.registerSubCommand(executor);
     }
 
     /// The following methods are used to interact with the database.
