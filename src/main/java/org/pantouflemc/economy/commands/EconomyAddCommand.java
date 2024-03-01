@@ -7,6 +7,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
+import org.pantouflemc.economy.Economy;
 import org.pantouflemc.economy.EconomyError;
 
 import com.google.common.base.Optional;
@@ -14,11 +15,8 @@ import com.hubspot.algebra.Result;
 
 public class EconomyAddCommand extends EconomyCommandExecutor {
 
-    private final org.pantouflemc.economy.Economy plugin;
-
-    public EconomyAddCommand(org.pantouflemc.economy.Economy plugin) {
+    public EconomyAddCommand() {
         super("add");
-        this.plugin = plugin;
     }
 
     @Override
@@ -40,7 +38,7 @@ public class EconomyAddCommand extends EconomyCommandExecutor {
             return false;
         }
 
-        Result<Void, EconomyError> result = this.plugin.addBalance(targetPlayer.getUniqueId(), amount);
+        Result<Void, EconomyError> result = Economy.getPlugin().addBalance(targetPlayer.getUniqueId(), amount);
 
         if (result.isErr()) {
             switch (result.unwrapErrOrElseThrow()) {

@@ -8,16 +8,14 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.pantouflemc.economy.Economy;
 
 import com.google.common.base.Optional;
 
 public class EconomyPayCommand extends EconomyCommandExecutor {
 
-    private final org.pantouflemc.economy.Economy plugin;
-
-    public EconomyPayCommand(org.pantouflemc.economy.Economy plugin) {
+    public EconomyPayCommand() {
         super("pay");
-        this.plugin = plugin;
     }
 
     @Override
@@ -54,7 +52,7 @@ public class EconomyPayCommand extends EconomyCommandExecutor {
         }
 
         // Transfer the balance
-        var result = this.plugin.transferMoney(player.getUniqueId(), targetPlayer.getUniqueId(), amount);
+        var result = Economy.getPlugin().transferMoney(player.getUniqueId(), targetPlayer.getUniqueId(), amount);
 
         if (result.isErr()) {
             switch (result.unwrapErrOrElseThrow()) {

@@ -3,14 +3,12 @@ package org.pantouflemc.economy.commands;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
+import org.pantouflemc.economy.Economy;
 
 public class EconomyTopCommand extends EconomyCommandExecutor {
 
-    private final org.pantouflemc.economy.Economy plugin;
-
-    public EconomyTopCommand(org.pantouflemc.economy.Economy plugin) {
+    public EconomyTopCommand() {
         super("top");
-        this.plugin = plugin;
     }
 
     @Override
@@ -22,7 +20,7 @@ public class EconomyTopCommand extends EconomyCommandExecutor {
         }
 
         // Get the accounts
-        var result = this.plugin.getTopPlayerAccounts(10, 0);
+        var result = Economy.getPlugin().getTopPlayerAccounts(10, 0);
 
         // Internal error: return false
         if (result.isErr()) {

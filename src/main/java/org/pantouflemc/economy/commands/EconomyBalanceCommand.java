@@ -4,14 +4,12 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.pantouflemc.economy.Economy;
 
 public class EconomyBalanceCommand extends EconomyCommandExecutor {
 
-    private final org.pantouflemc.economy.Economy plugin;
-
-    public EconomyBalanceCommand(org.pantouflemc.economy.Economy plugin) {
+    public EconomyBalanceCommand() {
         super("balance");
-        this.plugin = plugin;
     }
 
     @Override
@@ -31,7 +29,7 @@ public class EconomyBalanceCommand extends EconomyCommandExecutor {
         Player player = (Player) sender;
 
         // Get the balance of the player
-        var result = this.plugin.getBalance(player);
+        var result = Economy.getPlugin().getBalance(player);
 
         // Internal error: return false
         if (result.isErr()) {
