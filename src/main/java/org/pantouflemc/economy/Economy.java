@@ -446,4 +446,29 @@ public final class Economy extends JavaPlugin {
         return this.getMainAccount(player.getUniqueId());
     }
 
+    /**
+     * Check if a player has a main account.
+     * 
+     * @param playerUuid The UUID of the player to check.
+     * @return Whether the player has a main account.
+     */
+    public @NotNull boolean hasMainAccount(@NotNull UUID playerUuid) throws EconomyDatabaseError {
+        try {
+            this.getMainAccount(playerUuid);
+            return true;
+        } catch (EconomyAccountNotFoundError e) {
+            return false;
+        }
+    }
+
+    /**
+     * Check if a player has a main account.
+     * 
+     * @param player The player to check.
+     * @return Whether the player has a main account.
+     */
+    public @NotNull boolean hasMainAccount(@NotNull Player player) throws EconomyDatabaseError {
+        return this.hasMainAccount(player.getUniqueId());
+    }
+
 }
