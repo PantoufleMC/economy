@@ -9,9 +9,8 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 import org.pantouflemc.economy.Economy;
-import org.pantouflemc.economy.EconomyError;
-
-import com.hubspot.algebra.Result;
+import org.pantouflemc.economy.exceptions.EconomyAccountNotFoundError;
+import org.pantouflemc.economy.exceptions.EconomyInvalidAmountError;
 
 public class EconomyAddCommand extends EconomyCommandExecutor {
 
@@ -33,28 +32,26 @@ public class EconomyAddCommand extends EconomyCommandExecutor {
             @Nullable
             OfflinePlayer targetPlayer = sender.getServer().getOfflinePlayerIfCached(targetName);
             if (targetPlayer == null) {
-                sender.sendMessage("Target not found");
-                return false;
+                throw new EconomyAccountNotFoundError();
             }
 
-            Result<Void, EconomyError> result = Economy.getPlugin().addBalance(targetPlayer.getUniqueId(), amount);
-
-            if (result.isErr()) {
-                switch (result.unwrapErrOrElseThrow()) {
-                    case INVALID_AMOUNT:
-                        sender.sendMessage("Amount must be positive");
-                        break;
-                    default:
-                        sender.sendMessage("An error occurred");
-                        break;
-                }
-                return false;
-            }
+            // Add the balance
+            Economy.getPlugin().addBalance(targetPlayer.getUniqueId(), amount);
 
             sender.sendMessage("$" + amount + " added to the balance of " + targetPlayer.getName());
 
             return true;
+        } catch (EconomyAccountNotFoundError e) {
+            sender.sendMessage("Target not found");
+            return false;
+        } catch (EconomyInvalidAmountError e) {
+            sender.sendMessage("Amount must be positive");
+            return false;
         } catch (NumberFormatException e) {
+            sender.sendMessage("Invalid amount");
+            return false;
+        } catch (Exception e) {
+            sender.sendMessage("An error occurred");
             return false;
         }
     }

@@ -15,31 +15,30 @@ public class EconomyBalanceCommand extends EconomyCommandExecutor {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
             @NotNull String[] args) {
-        // Check if the sender is a player
-        if (!(sender instanceof Player)) {
+        try {
+            // Check if the sender is a player
+            if (!(sender instanceof Player)) {
+                return false;
+            }
+
+            // Check if the command has no arguments
+            if (args.length != 0) {
+                return false;
+            }
+
+            // Get the player
+            Player player = (Player) sender;
+
+            // Get the balance of the player
+            double balance = Economy.getPlugin().getBalance(player);
+
+            player.sendMessage("Your balance is $" + balance);
+
+            return true;
+        } catch (Exception e) {
+            sender.sendMessage("An error occurred");
             return false;
         }
-
-        // Check if the command has no arguments
-        if (args.length != 0) {
-            return false;
-        }
-
-        // Get the player
-        Player player = (Player) sender;
-
-        // Get the balance of the player
-        var result = Economy.getPlugin().getBalance(player);
-
-        // Internal error: return false
-        if (result.isErr()) {
-            return false;
-        }
-
-        double balance = result.unwrapOrElseThrow();
-        player.sendMessage("Your balance is $" + balance);
-
-        return true;
     }
 
 }

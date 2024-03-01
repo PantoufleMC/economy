@@ -20,7 +20,7 @@ public class PlayerListener implements Listener {
         org.bukkit.entity.Player player = event.getPlayer();
 
         // Check if the player already has a main account
-        if (this.plugin.getMainAccount(player).isOk()) {
+        if (this.plugin.hasMainAccount(player)) {
             return;
         }
 
