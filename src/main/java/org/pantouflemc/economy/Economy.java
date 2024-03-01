@@ -6,6 +6,9 @@ import java.util.logging.Logger;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
@@ -24,11 +27,10 @@ import org.pantouflemc.economy.exceptions.EconomyDatabaseError;
 import org.pantouflemc.economy.exceptions.EconomyDriverNotFoundException;
 import org.pantouflemc.economy.exceptions.EconomyInsufficientBalance;
 import org.pantouflemc.economy.exceptions.EconomyInvalidAmountError;
-import org.pantouflemc.economy.listeners.PlayerListener;
 
 import com.google.common.primitives.UnsignedInteger;
 
-public final class Economy extends JavaPlugin {
+public final class Economy extends JavaPlugin implements Listener {
 
     private static @NotNull Economy plugin;
     private static @NotNull Logger logger;
@@ -46,7 +48,7 @@ public final class Economy extends JavaPlugin {
 
         // Register listeners
         PluginManager pluginManager = this.getServer().getPluginManager();
-        pluginManager.registerEvents(new PlayerListener(this, databaseManager), this);
+        pluginManager.registerEvents(this, this);
 
         // Register commands
         var economyCommand = new EconomyCommand();
@@ -73,6 +75,23 @@ public final class Economy extends JavaPlugin {
         } catch (EconomyDatabaseDisconnectionError e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) throws Exception {
+        // Create the main account of the player if it does not exist
+        org.bukkit.entity.Player player = event.getPlayer();
+
+        // Check if the player already has a main account
+        if (Economy.plugin.hasMainAccount(player)) {
+            return;
+        }
+
+        // Add the player to the database
+        Economy.databaseManager.addPlayer(player.getUniqueId(), player.getName());
+
+        // If the player does not have a main account, create one
+        Economy.plugin.createAccount(player, true);
     }
 
     /**
