@@ -1,6 +1,5 @@
 package org.pantouflemc.economy.database;
 
-import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -14,14 +13,28 @@ import java.util.UUID;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jetbrains.annotations.NotNull;
 import org.pantouflemc.economy.exceptions.EconomyDriverNotFoundException;
+import org.pantouflemc.economy.exceptions.EconomyIllegalDatabaseEngine;
 import org.pantouflemc.economy.exceptions.EconomyInsufficientBalance;
 import org.pantouflemc.economy.exceptions.EconomyInvalidAmountError;
 import org.pantouflemc.economy.exceptions.EconomyDatabaseError;
+import org.pantouflemc.economy.Economy;
 import org.pantouflemc.economy.exceptions.EconomyAccountNotFoundError;
 import org.pantouflemc.economy.exceptions.EconomyDatabaseConnectionError;
 import org.pantouflemc.economy.exceptions.EconomyDatabaseDisconnectionError;
 
 import com.google.common.primitives.UnsignedInteger;
+
+enum DatabaseEngine {
+    // TODO: Add other database engines
+    SQLite;
+
+    public static DatabaseEngine fromString(String engine) throws EconomyIllegalDatabaseEngine {
+        return switch (engine) {
+            case "sqlite" -> SQLite;
+            default -> throw new EconomyIllegalDatabaseEngine();
+        };
+    }
+}
 
 public class DatabaseManager {
 
@@ -31,37 +44,37 @@ public class DatabaseManager {
      * Create a new DatabaseManager
      */
     public DatabaseManager() throws EconomyDriverNotFoundException, EconomyDatabaseError,
-            EconomyDatabaseConnectionError {
-        connect();
+            EconomyDatabaseConnectionError, EconomyIllegalDatabaseEngine {
+        String databaseEngine = Economy.getPlugin().getConfig().getString("database.engine");
+        String databaseUrl = Economy.getPlugin().getConfig().getString("database.url");
+        String databaseUsername = Economy.getPlugin().getConfig().getString("database.username");
+        String databasePassword = Economy.getPlugin().getConfig().getString("database.password");
+
+        // Connect to the database
+        switch (DatabaseEngine.fromString(databaseEngine)) {
+            case SQLite -> connectSQLite(databaseUrl);
+        }
+
+        // Initialize the database
+        initialization();
     }
 
     /**
-     * Connect to the database
+     * Connect to SQLite database
      */
-    private void connect() throws EconomyDriverNotFoundException, EconomyDatabaseError, EconomyDatabaseConnectionError {
-        // TODO: Change SQLite to PostgreSQL
-        File databaseDirectory = new File("plugins/Economy");
-        File databaseFile = new File(databaseDirectory, "database.db");
-
-        // Create the path to the database if it doesn't exist
-        if (!databaseDirectory.exists()) {
-            databaseDirectory.mkdirs();
-        }
-
+    public void connectSQLite(String databaseUrl) throws EconomyDriverNotFoundException, EconomyDatabaseError,
+            EconomyDatabaseConnectionError {
         try {
             // Register SQLite Driver
             Class.forName("org.sqlite.JDBC");
 
             // Connect to the database
-            connection = DriverManager.getConnection("jdbc:sqlite:" + databaseFile.getPath());
+            connection = DriverManager.getConnection(databaseUrl);
         } catch (ClassNotFoundException e) {
             throw new EconomyDriverNotFoundException();
         } catch (SQLException e) {
             throw new EconomyDatabaseConnectionError();
         }
-
-        // Initialize the database
-        initialization();
     }
 
     /**

@@ -5,6 +5,7 @@ import java.util.UUID;
 import java.util.logging.Logger;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -25,6 +26,7 @@ import org.pantouflemc.economy.exceptions.EconomyAccountNotFoundError;
 import org.pantouflemc.economy.exceptions.EconomyDatabaseDisconnectionError;
 import org.pantouflemc.economy.exceptions.EconomyDatabaseError;
 import org.pantouflemc.economy.exceptions.EconomyDriverNotFoundException;
+import org.pantouflemc.economy.exceptions.EconomyIllegalDatabaseEngine;
 import org.pantouflemc.economy.exceptions.EconomyInsufficientBalance;
 import org.pantouflemc.economy.exceptions.EconomyInvalidAmountError;
 
@@ -34,17 +36,25 @@ public final class Economy extends JavaPlugin implements Listener {
 
     private static @NotNull Economy plugin;
     private static @NotNull Logger logger;
+    private static @NotNull FileConfiguration config;
     private static @NotNull DatabaseManager databaseManager;
 
     @Override
     public void onEnable() {
         plugin = this;
         logger = this.getLogger();
+        config = this.getConfig();
         try {
             databaseManager = new DatabaseManager();
+        } catch (EconomyIllegalDatabaseEngine e) {
+            logger.severe("The database engine specified in the configuration file is not supported.");
+            throw new RuntimeException(e);
         } catch (EconomyDriverNotFoundException | EconomyDatabaseError e) {
             throw new RuntimeException(e);
         }
+
+        // Initialize the configuration file
+        this.initConfig();
 
         // Register listeners
         PluginManager pluginManager = this.getServer().getPluginManager();
@@ -99,6 +109,18 @@ public final class Economy extends JavaPlugin implements Listener {
      */
     public static Economy getPlugin() {
         return plugin;
+    }
+
+    /**
+     * Initialize the configuration file.
+     */
+    private void initConfig() {
+        config.addDefault("database.engine", "sqlite");
+        config.addDefault("database.url", "jdbc:sqlite:plugins/economy/database.db");
+        config.addDefault("database.username", "username");
+        config.addDefault("database.password", "password");
+        config.options().copyDefaults(true);
+        saveConfig();
     }
 
     /**
