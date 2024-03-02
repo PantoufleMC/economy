@@ -1,6 +1,9 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
     id 'java'
     id("xyz.jpenilla.run-paper") version "2.2.2"
+    id "com.github.johnrengelman.shadow" version "8.1.1"
 }
 
 group = 'org.pantouflemc'
@@ -44,6 +47,11 @@ tasks.withType(JavaCompile).configureEach {
     if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
         options.release.set(targetJavaVersion)
     }
+}
+
+tasks.named("shadowJar", ShadowJar) {
+    enableRelocation = true
+    relocationPrefix = "org.pantouflemc.economy.shadow"
 }
 
 processResources {
