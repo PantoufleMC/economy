@@ -23,6 +23,8 @@ repositories {
 
 dependencies {
     compileOnly "io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT"
+
+    implementation "com.zaxxer:HikariCP:4.0.3" // Database connection pool
 }
 
 def targetJavaVersion = 17

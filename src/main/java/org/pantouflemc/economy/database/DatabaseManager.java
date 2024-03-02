@@ -1,7 +1,6 @@
 package org.pantouflemc.economy.database;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -13,7 +12,6 @@ import java.util.UUID;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jetbrains.annotations.NotNull;
 import org.pantouflemc.economy.exceptions.EconomyDriverNotFoundException;
-import org.pantouflemc.economy.exceptions.EconomyIllegalDatabaseEngine;
 import org.pantouflemc.economy.exceptions.EconomyInsufficientBalance;
 import org.pantouflemc.economy.exceptions.EconomyInvalidAmountError;
 import org.pantouflemc.economy.exceptions.EconomyDatabaseError;
@@ -23,36 +21,36 @@ import org.pantouflemc.economy.exceptions.EconomyDatabaseConnectionError;
 import org.pantouflemc.economy.exceptions.EconomyDatabaseDisconnectionError;
 
 import com.google.common.primitives.UnsignedInteger;
-
-enum DatabaseEngine {
-    // TODO: Add other database engines
-    SQLite;
-
-    public static DatabaseEngine fromString(String engine) throws EconomyIllegalDatabaseEngine {
-        return switch (engine) {
-            case "sqlite" -> SQLite;
-            default -> throw new EconomyIllegalDatabaseEngine();
-        };
-    }
-}
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 public class DatabaseManager {
 
-    private Connection connection;
+    private final @NotNull HikariConfig config;
+    private final @NotNull HikariDataSource dataSource;
+    private final @NotNull Connection connection;
 
     /**
      * Create a new DatabaseManager
      */
     public DatabaseManager() throws EconomyDriverNotFoundException, EconomyDatabaseError,
-            EconomyDatabaseConnectionError, EconomyIllegalDatabaseEngine {
-        String databaseEngine = Economy.getPlugin().getConfig().getString("database.engine");
+            EconomyDatabaseConnectionError {
         String databaseUrl = Economy.getPlugin().getConfig().getString("database.url");
         String databaseUsername = Economy.getPlugin().getConfig().getString("database.username");
         String databasePassword = Economy.getPlugin().getConfig().getString("database.password");
 
         // Connect to the database
-        switch (DatabaseEngine.fromString(databaseEngine)) {
-            case SQLite -> connectSQLite(databaseUrl);
+        this.config = new HikariConfig();
+        this.config.setJdbcUrl(databaseUrl);
+        this.config.setUsername(databaseUsername);
+        this.config.setPassword(databasePassword);
+
+        this.dataSource = new HikariDataSource(config);
+
+        try {
+            this.connection = dataSource.getConnection();
+        } catch (SQLException e) {
+            throw new EconomyDatabaseConnectionError();
         }
 
         // Initialize the database
@@ -60,30 +58,14 @@ public class DatabaseManager {
     }
 
     /**
-     * Connect to SQLite database
-     */
-    public void connectSQLite(String databaseUrl) throws EconomyDriverNotFoundException, EconomyDatabaseError,
-            EconomyDatabaseConnectionError {
-        try {
-            // Register SQLite Driver
-            Class.forName("org.sqlite.JDBC");
-
-            // Connect to the database
-            connection = DriverManager.getConnection(databaseUrl);
-        } catch (ClassNotFoundException e) {
-            throw new EconomyDriverNotFoundException();
-        } catch (SQLException e) {
-            throw new EconomyDatabaseConnectionError();
-        }
-    }
-
-    /**
      * Disconnect from the database
      */
     public void disconnect() throws EconomyDatabaseDisconnectionError {
         try {
-            if (connection != null)
-                connection.close();
+            if (this.connection != null)
+                this.connection.close();
+            if (this.dataSource != null)
+                this.dataSource.close();
         } catch (SQLException e) {
             throw new EconomyDatabaseDisconnectionError();
         }
