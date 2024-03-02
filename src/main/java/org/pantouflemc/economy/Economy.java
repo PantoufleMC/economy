@@ -26,7 +26,6 @@ import org.pantouflemc.economy.exceptions.EconomyAccountNotFoundError;
 import org.pantouflemc.economy.exceptions.EconomyDatabaseDisconnectionError;
 import org.pantouflemc.economy.exceptions.EconomyDatabaseError;
 import org.pantouflemc.economy.exceptions.EconomyDriverNotFoundException;
-import org.pantouflemc.economy.exceptions.EconomyIllegalDatabaseEngine;
 import org.pantouflemc.economy.exceptions.EconomyInsufficientBalance;
 import org.pantouflemc.economy.exceptions.EconomyInvalidAmountError;
 
@@ -46,10 +45,8 @@ public final class Economy extends JavaPlugin implements Listener {
         config = this.getConfig();
         try {
             databaseManager = new DatabaseManager();
-        } catch (EconomyIllegalDatabaseEngine e) {
-            logger.severe("The database engine specified in the configuration file is not supported.");
-            throw new RuntimeException(e);
         } catch (EconomyDriverNotFoundException | EconomyDatabaseError e) {
+            logger.severe("An error occurred while trying to connect to the database.");
             throw new RuntimeException(e);
         }
 
@@ -81,7 +78,8 @@ public final class Economy extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         try {
-            databaseManager.disconnect();
+            if (databaseManager != null)
+                databaseManager.disconnect();
         } catch (EconomyDatabaseDisconnectionError e) {
             throw new RuntimeException(e);
         }
@@ -115,7 +113,6 @@ public final class Economy extends JavaPlugin implements Listener {
      * Initialize the configuration file.
      */
     private void initConfig() {
-        config.addDefault("database.engine", "sqlite");
         config.addDefault("database.url", "jdbc:sqlite:plugins/economy/database.db");
         config.addDefault("database.username", "username");
         config.addDefault("database.password", "password");
