@@ -10,18 +10,52 @@ commands:
   economy.balance:
     description: Check your balance
     usage: /economy balance
+    permission: economy.balance
   economy.pay:
     description: Pay another player
     usage: /economy pay <player> <amount>
+    permission: economy.pay
   economy.set:
     description: Set the balance of a player
     usage: /economy set <player> <amount>
+    permission: economy.set
   economy.add:
     description: Add money to a player
     usage: /economy add <player> <amount>
+    permission: economy.add
   economy.remove:
     description: Remove money from a player
     usage: /economy remove <player> <amount>
+    permission: economy.remove
   economy.top:
     description: Show the top players
     usage: /economy top
+    permission: economy.top
+permissions:
+  economy.*:
+    children:
+      economy.balance: true
+      economy.pay: true
+      economy.set: true
+      economy.add: true
+      economy.remove: true
+      economy.top: true
+    default: op
+  economy.balance:
+    default: true
+    description: Allows the player to check his balance
+  economy.pay:
+    default: true
+    description: Allows the player to pay another player
+  economy.set:
+    default: op
+    description: Allows the player to set the balance of another player
+  economy.add:
+    default: op
+    description: Allows the player to add money to another player
+  economy.remove:
+    default: op
+    description: Allows the player to remove money from another player
+  economy.top:
+    default: true
+    description: Allows the player to see the top player balances
