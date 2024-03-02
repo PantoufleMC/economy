@@ -1,5 +1,6 @@
 package org.pantouflemc.economy.database;
 
+import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -18,13 +19,12 @@ import org.pantouflemc.economy.exceptions.EconomyDatabaseError;
 import org.pantouflemc.economy.Economy;
 import org.pantouflemc.economy.exceptions.EconomyAccountNotFoundError;
 import org.pantouflemc.economy.exceptions.EconomyDatabaseConnectionError;
-import org.pantouflemc.economy.exceptions.EconomyDatabaseDisconnectionError;
 
 import com.google.common.primitives.UnsignedInteger;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
-public class DatabaseManager {
+public class DatabaseManager implements Closeable {
 
     private final @NotNull HikariConfig config;
     private final @NotNull HikariDataSource dataSource;
@@ -57,17 +57,15 @@ public class DatabaseManager {
         initialization();
     }
 
-    /**
-     * Disconnect from the database
-     */
-    public void disconnect() throws EconomyDatabaseDisconnectionError {
+    @Override
+    public void close() throws RuntimeException {
         try {
             if (this.connection != null)
                 this.connection.close();
             if (this.dataSource != null)
                 this.dataSource.close();
         } catch (SQLException e) {
-            throw new EconomyDatabaseDisconnectionError();
+            throw new RuntimeException(e);
         }
     }
 
