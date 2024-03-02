@@ -23,7 +23,6 @@ import org.pantouflemc.economy.commands.EconomySetCommand;
 import org.pantouflemc.economy.commands.EconomyTopCommand;
 import org.pantouflemc.economy.database.DatabaseManager;
 import org.pantouflemc.economy.exceptions.EconomyAccountNotFoundError;
-import org.pantouflemc.economy.exceptions.EconomyDatabaseDisconnectionError;
 import org.pantouflemc.economy.exceptions.EconomyDatabaseError;
 import org.pantouflemc.economy.exceptions.EconomyDriverNotFoundException;
 import org.pantouflemc.economy.exceptions.EconomyInsufficientBalance;
@@ -77,12 +76,10 @@ public final class Economy extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        try {
-            if (databaseManager != null)
-                databaseManager.disconnect();
-        } catch (EconomyDatabaseDisconnectionError e) {
-            throw new RuntimeException(e);
-        }
+        // We still need to check for null because the plugin can fail and call
+        // onDisable prematurely
+        if (databaseManager != null)
+            databaseManager.close();
     }
 
     @EventHandler

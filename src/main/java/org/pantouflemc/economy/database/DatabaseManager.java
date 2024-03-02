@@ -1,5 +1,6 @@
 package org.pantouflemc.economy.database;
 
+import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -18,13 +19,12 @@ import org.pantouflemc.economy.exceptions.EconomyDatabaseError;
 import org.pantouflemc.economy.Economy;
 import org.pantouflemc.economy.exceptions.EconomyAccountNotFoundError;
 import org.pantouflemc.economy.exceptions.EconomyDatabaseConnectionError;
-import org.pantouflemc.economy.exceptions.EconomyDatabaseDisconnectionError;
 
 import com.google.common.primitives.UnsignedInteger;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
-public class DatabaseManager {
+public class DatabaseManager implements Closeable {
 
     private final @NotNull HikariConfig config;
     private final @NotNull HikariDataSource dataSource;
@@ -57,17 +57,15 @@ public class DatabaseManager {
         initialization();
     }
 
-    /**
-     * Disconnect from the database
-     */
-    public void disconnect() throws EconomyDatabaseDisconnectionError {
+    @Override
+    public void close() throws RuntimeException {
         try {
             if (this.connection != null)
                 this.connection.close();
             if (this.dataSource != null)
                 this.dataSource.close();
         } catch (SQLException e) {
-            throw new EconomyDatabaseDisconnectionError();
+            throw new RuntimeException(e);
         }
     }
 
@@ -75,9 +73,7 @@ public class DatabaseManager {
      * Initialize the database
      */
     private void initialization() throws EconomyDatabaseError {
-        try {
-            Statement statement = this.connection.createStatement();
-
+        try (Statement statement = this.connection.createStatement()) {
             // Create the accounts table
             statement.execute("""
                     CREATE TABLE IF NOT EXISTS accounts (
@@ -108,8 +104,6 @@ public class DatabaseManager {
                     CREATE UNIQUE INDEX IF NOT EXISTS player_uuid_index
                     ON players_accounts (player_uuid, account_id) WHERE main = TRUE;
                     """);
-
-            statement.close();
         } catch (SQLException e) {
             throw new EconomyDatabaseError();
         }
@@ -121,10 +115,8 @@ public class DatabaseManager {
      * @return the ID of the new account
      */
     public @NotNull UnsignedInteger createAccount() throws EconomyDatabaseError {
-        try {
-            String query = "INSERT INTO accounts (balance) VALUES (0.0);";
-            PreparedStatement statement = this.connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
-
+        String query = "INSERT INTO accounts (balance) VALUES (0.0);";
+        try (PreparedStatement statement = this.connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
             int affectedRows = statement.executeUpdate();
 
             if (affectedRows == 0) {
@@ -150,9 +142,8 @@ public class DatabaseManager {
      * @param id the ID of the account
      */
     public void deleteAccount(UnsignedInteger accountId) throws EconomyAccountNotFoundError, EconomyDatabaseError {
-        try {
-            String query = "DELETE FROM accounts WHERE id = ?;";
-            PreparedStatement statement = this.connection.prepareStatement(query);
+        String query = "DELETE FROM accounts WHERE id = ?;";
+        try (PreparedStatement statement = this.connection.prepareStatement(query)) {
             statement.setInt(1, accountId.intValue());
 
             int affectedRows = statement.executeUpdate();
@@ -172,9 +163,8 @@ public class DatabaseManager {
      * @param playerName the name of the player
      */
     public void addPlayer(UUID playerUuid, String playerName) throws EconomyDatabaseError {
-        try {
-            String query = "INSERT INTO players (player_uuid, player_name) VALUES (?, ?);";
-            PreparedStatement statement = this.connection.prepareStatement(query);
+        String query = "INSERT INTO players (player_uuid, player_name) VALUES (?, ?);";
+        try (PreparedStatement statement = this.connection.prepareStatement(query)) {
             statement.setString(1, playerUuid.toString());
             statement.setString(2, playerName);
 
@@ -197,11 +187,10 @@ public class DatabaseManager {
      */
     public void createPlayerAccountRelation(UUID playerUuid, UnsignedInteger accountId, boolean main)
             throws EconomyAccountNotFoundError, EconomyDatabaseError {
-        try {
-            String query = main
-                    ? "INSERT INTO players_accounts (player_uuid, account_id, main) VALUES (?, ?, ?);"
-                    : "INSERT INTO players_accounts (player_uuid, account_id) VALUES (?, ?);";
-            PreparedStatement statement = this.connection.prepareStatement(query);
+        String query = main
+                ? "INSERT INTO players_accounts (player_uuid, account_id, main) VALUES (?, ?, ?);"
+                : "INSERT INTO players_accounts (player_uuid, account_id) VALUES (?, ?);";
+        try (PreparedStatement statement = this.connection.prepareStatement(query)) {
             statement.setString(1, playerUuid.toString());
             statement.setInt(2, accountId.intValue());
 
@@ -228,12 +217,11 @@ public class DatabaseManager {
      */
     public void deletePlayerAccountRelation(UUID playerUuid, UnsignedInteger accountId)
             throws EconomyAccountNotFoundError, EconomyDatabaseError {
-        try {
-            String query = """
-                    DELETE FROM players_accounts WHERE player_uuid = ? AND account_id = ?;
-                    DELETE FROM accounts WHERE id = ? AND NOT EXISTS (SELECT 1 FROM players_accounts WHERE account_id = ?);
-                    """;
-            PreparedStatement statement = this.connection.prepareStatement(query);
+        String query = """
+                DELETE FROM players_accounts WHERE player_uuid = ? AND account_id = ?;
+                DELETE FROM accounts WHERE id = ? AND NOT EXISTS (SELECT 1 FROM players_accounts WHERE account_id = ?);
+                """;
+        try (PreparedStatement statement = this.connection.prepareStatement(query)) {
             statement.setString(1, playerUuid.toString());
             statement.setInt(2, accountId.intValue());
             statement.setInt(3, accountId.intValue());
@@ -257,9 +245,8 @@ public class DatabaseManager {
      */
     public @NotNull double getBalance(UnsignedInteger accountId) throws EconomyAccountNotFoundError,
             EconomyDatabaseError {
-        try {
-            String query = "SELECT balance FROM accounts WHERE id = ?;";
-            PreparedStatement statement = connection.prepareStatement(query);
+        String query = "SELECT balance FROM accounts WHERE id = ?;";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
             statement.setInt(1, accountId.intValue());
 
             ResultSet resultSet = statement.executeQuery();
@@ -286,9 +273,8 @@ public class DatabaseManager {
             throw new EconomyInvalidAmountError();
         }
 
-        try {
-            String query = "UPDATE accounts SET balance = ? WHERE id = ?;";
-            PreparedStatement statement = connection.prepareStatement(query);
+        String query = "UPDATE accounts SET balance = ? WHERE id = ?;";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
             statement.setDouble(1, balance);
             statement.setInt(2, accountId.intValue());
 
@@ -314,9 +300,8 @@ public class DatabaseManager {
             throw new EconomyInvalidAmountError();
         }
 
-        try {
-            String query = "UPDATE accounts SET balance = balance + ? WHERE id = ?;";
-            PreparedStatement statement = connection.prepareStatement(query);
+        String query = "UPDATE accounts SET balance = balance + ? WHERE id = ?;";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
             statement.setDouble(1, amount);
             statement.setInt(2, accountId.intValue());
 
@@ -342,9 +327,8 @@ public class DatabaseManager {
             throw new EconomyInvalidAmountError();
         }
 
-        try {
-            String query = "UPDATE accounts SET balance = balance - ? WHERE id = ? AND balance >= ?;";
-            PreparedStatement statement = connection.prepareStatement(query);
+        String query = "UPDATE accounts SET balance = balance - ? WHERE id = ? AND balance >= ?;";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
             statement.setDouble(1, amount);
             statement.setInt(2, accountId.intValue());
             statement.setDouble(3, amount);
@@ -371,9 +355,8 @@ public class DatabaseManager {
      * @return the UUIDs of the players associated with the account
      */
     public @NotNull List<UUID> getPlayers(UnsignedInteger accountId) throws EconomyDatabaseError {
-        try {
-            String query = "SELECT player_uuid FROM players_accounts WHERE account_id = ?;";
-            PreparedStatement statement = connection.prepareStatement(query);
+        String query = "SELECT player_uuid FROM players_accounts WHERE account_id = ?;";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
             statement.setInt(1, accountId.intValue());
 
             ResultSet resultSet = statement.executeQuery();
@@ -399,9 +382,8 @@ public class DatabaseManager {
      * @return the IDs of the accounts associated with the player
      */
     public @NotNull List<Integer> getAccounts(UUID playerUuid) throws EconomyDatabaseError {
-        try {
-            String query = "SELECT account_id FROM players_accounts WHERE player_uuid = ?;";
-            PreparedStatement statement = connection.prepareStatement(query);
+        String query = "SELECT account_id FROM players_accounts WHERE player_uuid = ?;";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
             statement.setString(1, playerUuid.toString());
 
             ResultSet resultSet = statement.executeQuery();
@@ -429,16 +411,15 @@ public class DatabaseManager {
      */
     public @NotNull List<ImmutablePair<String, Double>> getTopPlayerAccounts(int limit, int offset)
             throws EconomyDatabaseError {
-        try {
-            String query = """
-                    SELECT player_name, balance FROM players_accounts
-                    LEFT JOIN accounts ON players_accounts.account_id = accounts.id
-                    LEFT JOIN players ON players_accounts.player_uuid = players.player_uuid
-                    WHERE main = TRUE
-                    ORDER BY balance DESC
-                    LIMIT ? OFFSET ?;
-                    """;
-            PreparedStatement statement = connection.prepareStatement(query);
+        String query = """
+                SELECT player_name, balance FROM players_accounts
+                LEFT JOIN accounts ON players_accounts.account_id = accounts.id
+                LEFT JOIN players ON players_accounts.player_uuid = players.player_uuid
+                WHERE main = TRUE
+                ORDER BY balance DESC
+                LIMIT ? OFFSET ?;
+                """;
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
             statement.setInt(1, limit);
             statement.setInt(2, offset);
 
@@ -466,9 +447,8 @@ public class DatabaseManager {
      */
     public @NotNull UnsignedInteger getMainAccount(UUID playerUuid) throws EconomyAccountNotFoundError,
             EconomyDatabaseError {
-        try {
-            String query = "SELECT account_id FROM players_accounts WHERE player_uuid = ? AND main = TRUE;";
-            PreparedStatement statement = connection.prepareStatement(query);
+        String query = "SELECT account_id FROM players_accounts WHERE player_uuid = ? AND main = TRUE;";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
             statement.setString(1, playerUuid.toString());
 
             ResultSet resultSet = statement.executeQuery();
@@ -491,9 +471,8 @@ public class DatabaseManager {
      * @return true if the player has the account, false otherwise
      */
     public @NotNull boolean hasAccount(UUID playerUuid, UnsignedInteger accountId) throws EconomyDatabaseError {
-        try {
-            String query = "SELECT count(*) FROM players_accounts WHERE player_uuid = ? AND account_id = ?;";
-            PreparedStatement statement = connection.prepareStatement(query);
+        String query = "SELECT count(*) FROM players_accounts WHERE player_uuid = ? AND account_id = ?;";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
             statement.setString(1, playerUuid.toString());
             statement.setInt(2, accountId.intValue());
 
