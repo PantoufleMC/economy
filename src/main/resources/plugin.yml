@@ -6,18 +6,18 @@ libraries:
 commands:
   economy:
     description: Economy command
-    usage: /economy <subcommand>
+    usage: /<command> <subcommand>
   balance:
     description: Check your balance
-    usage: /economy balance
+    usage: /<command>
     permission: economy.balance
   pay:
     description: Pay another player
-    usage: /economy pay <player> <amount>
+    usage: /<command> <player> <amount>
     permission: economy.pay
   top:
     description: Show the top players
-    usage: /economy top
+    usage: /<command>
     permission: economy.top
 permissions:
   economy.*:
