@@ -33,6 +33,21 @@ public abstract class EconomyCommandExecutor implements TabExecutor {
     protected final Component messagePlayerOnly = Component
             .text("This command can only be used by players")
             .color(NamedTextColor.RED);
+    protected final Component messageAmountMustBePositive = Component
+            .text("The amount must be positive")
+            .color(NamedTextColor.RED);
+    protected final Component messageInvalidAmount = Component
+            .text("The amount is invalid")
+            .color(NamedTextColor.RED);
+    protected final Component messageTargetNotFound = Component
+            .text("The target player was not found")
+            .color(NamedTextColor.RED);
+    protected final Component messageTargetIsSender = Component
+            .text("The target player can't be yourself")
+            .color(NamedTextColor.RED);
+    protected final Component messageInsufficientBalance = Component
+            .text("You don't have enough money")
+            .color(NamedTextColor.RED);
 
     EconomyCommandExecutor(String name) {
         this.commandName = name;

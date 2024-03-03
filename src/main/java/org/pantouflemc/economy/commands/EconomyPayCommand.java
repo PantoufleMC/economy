@@ -10,11 +10,16 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.pantouflemc.economy.Economy;
-import org.pantouflemc.economy.exceptions.EconomyAccountNotFoundError;
 import org.pantouflemc.economy.exceptions.EconomyInsufficientBalance;
-import org.pantouflemc.economy.exceptions.EconomyInvalidAmountError;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 public class EconomyPayCommand extends EconomyCommandExecutor {
+
+    private final Component messageUsage = Component
+            .text("Usage: /pay <player> <amount>")
+            .color(NamedTextColor.RED);
 
     public EconomyPayCommand() {
         super("pay");
@@ -24,60 +29,68 @@ public class EconomyPayCommand extends EconomyCommandExecutor {
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
             @NotNull String[] args) {
         if (!sender.hasPermission("economy.pay")) {
-            sender.sendMessage("You don't have permission to use this command");
-            return false;
+            sender.sendMessage(messageNoPermission);
+            return true;
+        }
+
+        // Check if the sender is a player
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(messagePlayerOnly);
+            return true;
+        }
+
+        // Parse the arguments
+        if (args.length != 2) {
+            sender.sendMessage(messageUsage);
+            return true;
+        }
+        final @NotNull String targetName = args[0];
+        final @Nullable Double amount = parseAmount(args[1]);
+
+        // Check if the amount is valid
+        if (amount == null || amount == 0) {
+            sender.sendMessage(messageInvalidAmount);
+            return true;
+        } else if (amount < 0) {
+            sender.sendMessage(messageAmountMustBePositive);
+            return true;
+        }
+
+        // Get the target player
+        final @Nullable OfflinePlayer targetPlayer = sender.getServer().getOfflinePlayerIfCached(targetName);
+        if (targetPlayer == null) {
+            sender.sendMessage(messageTargetNotFound);
+            return true;
+        }
+
+        // Get the player
+        final @NotNull Player player = (Player) sender;
+
+        // Check if the target player is the same as the sender
+        if (player.getUniqueId().equals(targetPlayer.getUniqueId())) {
+            sender.sendMessage(messageTargetIsSender);
+            return true;
         }
 
         try {
-            // Check if the sender is a player
-            if (!(sender instanceof Player)) {
-                return false;
-            }
-
-            // Get the player
-            Player player = (Player) sender;
-
-            // Parse the arguments
-            if (args.length != 2)
-                return false;
-            String targetName = args[0];
-            double amount = Double.parseDouble(args[1]);
-
-            // Get the target player
-            @Nullable
-            OfflinePlayer targetPlayer = sender.getServer().getOfflinePlayerIfCached(targetName);
-            if (targetPlayer == null) {
-                throw new EconomyAccountNotFoundError();
-            }
-
-            // Check if the target player is the same as the sender
-            if (player.getUniqueId().equals(targetPlayer.getUniqueId())) {
-                sender.sendMessage("You cannot transfer money to yourself");
-                return false;
-            }
-
             // Transfer the balance
             Economy.getPlugin().transferMoney(player.getUniqueId(), targetPlayer.getUniqueId(), amount);
-
-            sender.sendMessage("$" + amount + " transferred to " + targetPlayer.getName());
-
-            return true;
-        } catch (EconomyAccountNotFoundError e) {
-            sender.sendMessage("Target not found");
-            return false;
         } catch (EconomyInsufficientBalance e) {
-            sender.sendMessage("You do not have enough balance");
-            return false;
-        } catch (EconomyInvalidAmountError e) {
-            sender.sendMessage("Amount must be positive");
-            return false;
-        } catch (NumberFormatException e) {
-            sender.sendMessage("Invalid amount");
-            return false;
+            sender.sendMessage(messageInsufficientBalance);
+            return true;
         } catch (Exception e) {
-            sender.sendMessage("An error occurred");
-            return false;
+            sender.sendMessage(messageErrorOccurred);
+            return true;
         }
+
+        final Component message = Component.text()
+                .content("You transferred ").color(NamedTextColor.GRAY)
+                .append(Component.text("$" + formatCurrency(amount)).color(NamedTextColor.WHITE))
+                .append(Component.text(" to ").color(NamedTextColor.GRAY))
+                .append(Component.text(targetName).color(NamedTextColor.WHITE))
+                .build();
+        sender.sendMessage(message);
+        return true;
     }
 
     @Override
