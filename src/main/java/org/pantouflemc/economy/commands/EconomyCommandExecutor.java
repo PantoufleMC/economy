@@ -30,9 +30,6 @@ public abstract class EconomyCommandExecutor implements TabExecutor {
     protected final Component messagePlayerOnly = Component
             .text("This command can only be used by players")
             .color(NamedTextColor.RED);
-    protected final Component messageUsage = Component
-            .text("Usage: /balance")
-            .color(NamedTextColor.RED);
 
     EconomyCommandExecutor(String name) {
         this.commandName = name;

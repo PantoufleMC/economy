@@ -11,6 +11,10 @@ import net.kyori.adventure.text.format.NamedTextColor;
 
 public class EconomyBalanceCommand extends EconomyCommandExecutor {
 
+    private final Component messageUsage = Component
+            .text("Usage: /balance")
+            .color(NamedTextColor.RED);
+
     public EconomyBalanceCommand() {
         super("balance");
     }
