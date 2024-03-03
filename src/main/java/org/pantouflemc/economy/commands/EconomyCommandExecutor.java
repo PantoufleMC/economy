@@ -13,10 +13,26 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
 import org.jetbrains.annotations.NotNull;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+
 public abstract class EconomyCommandExecutor implements TabExecutor {
 
     protected final String commandName;
     protected Map<String, EconomyCommandExecutor> subCommands = new HashMap<>();
+
+    protected final Component messageNoPermission = Component
+            .text("You don't have permission to use this command")
+            .color(NamedTextColor.RED);
+    protected final Component messageErrorOccurred = Component
+            .text("An error occurred")
+            .color(NamedTextColor.RED);
+    protected final Component messagePlayerOnly = Component
+            .text("This command can only be used by players")
+            .color(NamedTextColor.RED);
+    protected final Component messageUsage = Component
+            .text("Usage: /balance")
+            .color(NamedTextColor.RED);
 
     EconomyCommandExecutor(String name) {
         this.commandName = name;
