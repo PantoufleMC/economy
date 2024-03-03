@@ -6,12 +6,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -109,6 +112,38 @@ public abstract class EconomyCommandExecutor implements TabExecutor {
      */
     protected static @NotNull String formatCurrency(final @NotNull double number) {
         return String.format(Locale.GERMAN, "%,.2f", number);
+    }
+
+    /**
+     * Parse an amount from a string
+     *
+     * @param amount the amount to parse
+     * @return the parsed amount or null if the amount is invalid
+     */
+    protected static @Nullable Double parseAmount(final @NotNull String amount) {
+        final Pattern pattern = Pattern.compile("^(-?\\d+)?(?:[,.](\\d{0,2})0*|)$");
+        final Matcher matcher = pattern.matcher(amount);
+
+        if (!matcher.find()) {
+            return null;
+        }
+
+        int integerPart = 0;
+        int decimalPart = 0;
+
+        try {
+            if (matcher.group(1) != null && !matcher.group(1).isEmpty()) {
+                integerPart = Integer.parseInt(matcher.group(1));
+            }
+            if (matcher.group(2) != null && !matcher.group(2).isEmpty()) {
+                decimalPart = Integer.parseInt(matcher.group(2));
+            }
+        } catch (NumberFormatException e) {
+            // Should never happen
+            return null;
+        }
+
+        return integerPart + decimalPart / 100.0;
     }
 
 }
