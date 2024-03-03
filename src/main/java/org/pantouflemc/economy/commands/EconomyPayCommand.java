@@ -85,9 +85,9 @@ public class EconomyPayCommand extends EconomyCommandExecutor {
 
         final Component message = Component.text()
                 .content("You transferred ").color(NamedTextColor.GRAY)
-                .append(Component.text("$" + formatCurrency(amount)).color(NamedTextColor.WHITE))
-                .append(Component.text(" to ").color(NamedTextColor.GRAY))
-                .append(Component.text(targetName).color(NamedTextColor.WHITE))
+                .append(Component.text("$" + formatCurrency(amount), NamedTextColor.WHITE))
+                .append(Component.text(" to ", NamedTextColor.GRAY))
+                .append(Component.text(targetName, NamedTextColor.WHITE))
                 .build();
         sender.sendMessage(message);
         return true;

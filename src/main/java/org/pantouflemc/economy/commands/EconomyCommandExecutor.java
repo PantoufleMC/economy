@@ -25,29 +25,21 @@ public abstract class EconomyCommandExecutor implements TabExecutor {
     protected Map<String, EconomyCommandExecutor> subCommands = new HashMap<>();
 
     protected final Component messageNoPermission = Component
-            .text("You don't have permission to use this command")
-            .color(NamedTextColor.RED);
+            .text("You don't have permission to use this command", NamedTextColor.RED);
     protected final Component messageErrorOccurred = Component
-            .text("An error occurred")
-            .color(NamedTextColor.RED);
+            .text("An error occurred", NamedTextColor.RED);
     protected final Component messagePlayerOnly = Component
-            .text("This command can only be used by players")
-            .color(NamedTextColor.RED);
+            .text("This command can only be used by players", NamedTextColor.RED);
     protected final Component messageAmountMustBePositive = Component
-            .text("The amount must be positive")
-            .color(NamedTextColor.RED);
+            .text("The amount must be positive", NamedTextColor.RED);
     protected final Component messageInvalidAmount = Component
-            .text("The amount is invalid")
-            .color(NamedTextColor.RED);
+            .text("The amount is invalid", NamedTextColor.RED);
     protected final Component messageTargetNotFound = Component
-            .text("The target player was not found")
-            .color(NamedTextColor.RED);
+            .text("The target player was not found", NamedTextColor.RED);
     protected final Component messageTargetIsSender = Component
-            .text("The target player can't be yourself")
-            .color(NamedTextColor.RED);
+            .text("The target player can't be yourself", NamedTextColor.RED);
     protected final Component messageInsufficientBalance = Component
-            .text("You don't have enough money")
-            .color(NamedTextColor.RED);
+            .text("You don't have enough money", NamedTextColor.RED);
 
     EconomyCommandExecutor(String name) {
         this.commandName = name;

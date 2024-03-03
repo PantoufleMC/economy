@@ -52,13 +52,10 @@ public class EconomyBalanceCommand extends EconomyCommandExecutor {
             return true;
         }
 
-        final Component balanceString = Component
-                .text("$" + formatCurrency(balance))
-                .color(NamedTextColor.WHITE);
-        final Component message = Component
-                .text("Your balance is ")
-                .color(NamedTextColor.GRAY)
-                .append(balanceString);
+        final Component message = Component.text()
+                .content("Your balance is ").color(NamedTextColor.GRAY)
+                .append(Component.text("$" + formatCurrency(balance), NamedTextColor.WHITE))
+                .build();
         player.sendMessage(message);
         return true;
     }
