@@ -15,18 +15,6 @@ commands:
     description: Pay another player
     usage: /economy pay <player> <amount>
     permission: economy.pay
-  economy.set:
-    description: Set the balance of a player
-    usage: /economy set <player> <amount>
-    permission: economy.set
-  economy.add:
-    description: Add money to a player
-    usage: /economy add <player> <amount>
-    permission: economy.add
-  economy.remove:
-    description: Remove money from a player
-    usage: /economy remove <player> <amount>
-    permission: economy.remove
   economy.top:
     description: Show the top players
     usage: /economy top
