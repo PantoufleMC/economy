@@ -6,6 +6,9 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.pantouflemc.economy.Economy;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+
 public class EconomyBalanceCommand extends EconomyCommandExecutor {
 
     public EconomyBalanceCommand() {
@@ -16,18 +19,20 @@ public class EconomyBalanceCommand extends EconomyCommandExecutor {
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
             @NotNull String[] args) {
         if (!sender.hasPermission("economy.balance")) {
-            sender.sendMessage("You don't have permission to use this command");
-            return false;
+            sender.sendMessage(messageNoPermission);
+            return true;
         }
 
         // Check if the sender is a player
         if (!(sender instanceof Player)) {
-            return false;
+            sender.sendMessage(messagePlayerOnly);
+            return true;
         }
 
         // Check if the command has no arguments
         if (args.length != 0) {
-            return false;
+            sender.sendMessage(messageUsage);
+            return true;
         }
 
         // Get the player
@@ -39,11 +44,18 @@ public class EconomyBalanceCommand extends EconomyCommandExecutor {
         try {
             balance = Economy.getPlugin().getBalance(player);
         } catch (Exception e) {
-            sender.sendMessage("An error occurred");
-            return false;
+            sender.sendMessage(messageErrorOccurred);
+            return true;
         }
 
-        player.sendMessage("Your balance is $" + balance);
+        final Component balanceString = Component
+                .text("$" + formatCurrency(balance))
+                .color(NamedTextColor.WHITE);
+        final Component message = Component
+                .text("Your balance is ")
+                .color(NamedTextColor.GRAY)
+                .append(balanceString);
+        player.sendMessage(message);
         return true;
     }
 
