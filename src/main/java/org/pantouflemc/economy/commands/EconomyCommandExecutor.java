@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.bukkit.command.Command;
@@ -85,6 +86,16 @@ public abstract class EconomyCommandExecutor implements TabExecutor {
      */
     public void registerSubCommand(EconomyCommandExecutor executor) {
         subCommands.put(executor.getCommandName(), executor);
+    }
+
+    /**
+     * Format a number to a currency string. The number is formatted with the
+     * German locale. (e.g. 1.000,00)
+     * 
+     * @param number the number to format
+     */
+    protected static @NotNull String formatCurrency(final @NotNull double number) {
+        return String.format(Locale.GERMAN, "%,.2f", number);
     }
 
 }
