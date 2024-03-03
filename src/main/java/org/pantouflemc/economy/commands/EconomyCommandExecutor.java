@@ -51,6 +51,9 @@ public abstract class EconomyCommandExecutor implements TabExecutor {
                 // Check if the sender has the permission to execute the command
                 if (!(sender.hasPermission("economy." + commandName) || sender.hasPermission("economy.*")))
                     continue;
+                // Check if the command name starts with the argument
+                if (!(args.length == 0 || commandName.startsWith(args[0])))
+                    continue;
 
                 commandNames.add(commandName);
             }
