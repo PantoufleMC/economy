@@ -7,15 +7,15 @@ commands:
   economy:
     description: Economy command
     usage: /economy <subcommand>
-  economy.balance:
+  balance:
     description: Check your balance
     usage: /economy balance
     permission: economy.balance
-  economy.pay:
+  pay:
     description: Pay another player
     usage: /economy pay <player> <amount>
     permission: economy.pay
-  economy.top:
+  top:
     description: Show the top players
     usage: /economy top
     permission: economy.top
