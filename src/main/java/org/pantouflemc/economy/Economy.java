@@ -15,12 +15,12 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.pantouflemc.economy.commands.EconomyAddCommand;
 import org.pantouflemc.economy.commands.EconomyBalanceCommand;
+import org.pantouflemc.economy.commands.EconomyBalanceTopCommand;
 import org.pantouflemc.economy.commands.EconomyCommand;
 import org.pantouflemc.economy.commands.EconomyCommandExecutor;
 import org.pantouflemc.economy.commands.EconomyPayCommand;
 import org.pantouflemc.economy.commands.EconomyRemoveCommand;
 import org.pantouflemc.economy.commands.EconomySetCommand;
-import org.pantouflemc.economy.commands.EconomyTopCommand;
 import org.pantouflemc.economy.database.DatabaseManager;
 import org.pantouflemc.economy.exceptions.EconomyAccountNotFoundError;
 import org.pantouflemc.economy.exceptions.EconomyDatabaseError;
@@ -59,19 +59,23 @@ public final class Economy extends JavaPlugin implements Listener {
         // Register commands
         var economyCommand = new EconomyCommand();
         var economyBalanceCommand = new EconomyBalanceCommand();
+        var economyBalanceTopCommand = new EconomyBalanceTopCommand();
         var economyPayCommand = new EconomyPayCommand();
         var economySetCommand = new EconomySetCommand();
         var economyAddCommand = new EconomyAddCommand();
         var economyRemoveCommand = new EconomyRemoveCommand();
-        var economyTopCommand = new EconomyTopCommand();
+
+        economyCommand.registerSubCommand(economyBalanceCommand);
+        economyCommand.registerSubCommand(economyBalanceTopCommand);
+        economyCommand.registerSubCommand(economyPayCommand);
+        economyCommand.registerSubCommand(economySetCommand);
+        economyCommand.registerSubCommand(economyAddCommand);
+        economyCommand.registerSubCommand(economyRemoveCommand);
 
         this.registerCommand(economyCommand);
-        this.registerSubCommand(economyBalanceCommand, economyCommand);
-        this.registerSubCommand(economyPayCommand, economyCommand);
-        this.registerSubCommand(economySetCommand, economyCommand);
-        this.registerSubCommand(economyAddCommand, economyCommand);
-        this.registerSubCommand(economyRemoveCommand, economyCommand);
-        this.registerSubCommand(economyTopCommand, economyCommand);
+        this.registerCommand(economyBalanceCommand);
+        this.registerCommand(economyBalanceTopCommand);
+        this.registerCommand(economyPayCommand);
     }
 
     @Override
@@ -124,18 +128,6 @@ public final class Economy extends JavaPlugin implements Listener {
      */
     private void registerCommand(@NotNull EconomyCommandExecutor executor) {
         Economy.getPlugin().getCommand(executor.getCommandName()).setExecutor(executor);
-    }
-
-    /**
-     * Register a sub-command to a command.
-     * 
-     * @param executor the executor of the sub-command
-     * @param command  the command to register the sub-command to
-     */
-    private void registerSubCommand(@NotNull EconomyCommandExecutor executor, @NotNull EconomyCommand command) {
-        String commandName = command.getCommandName() + "." + executor.getCommandName();
-        Economy.getPlugin().getCommand(commandName).setExecutor(executor);
-        command.registerSubCommand(executor);
     }
 
     /// The following methods are used to interact with the database.

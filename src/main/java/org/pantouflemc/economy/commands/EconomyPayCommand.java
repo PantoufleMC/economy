@@ -23,6 +23,11 @@ public class EconomyPayCommand extends EconomyCommandExecutor {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
             @NotNull String[] args) {
+        if (!sender.hasPermission("economy.pay")) {
+            sender.sendMessage("You don't have permission to use this command");
+            return false;
+        }
+
         try {
             // Check if the sender is a player
             if (!(sender instanceof Player)) {

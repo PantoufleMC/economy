@@ -5,15 +5,20 @@ import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 import org.pantouflemc.economy.Economy;
 
-public class EconomyTopCommand extends EconomyCommandExecutor {
+public class EconomyBalanceTopCommand extends EconomyCommandExecutor {
 
-    public EconomyTopCommand() {
-        super("top");
+    public EconomyBalanceTopCommand() {
+        super("balancetop");
     }
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
             @NotNull String[] args) {
+        if (!sender.hasPermission("economy.balancetop")) {
+            sender.sendMessage("You don't have permission to use this command");
+            return false;
+        }
+
         try {
             // Check if the command has no arguments
             if (args.length != 0) {

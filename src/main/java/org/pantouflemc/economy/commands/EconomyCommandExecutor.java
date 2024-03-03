@@ -1,5 +1,6 @@
 package org.pantouflemc.economy.commands;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -45,7 +46,19 @@ public abstract class EconomyCommandExecutor implements TabExecutor {
             @NotNull String alias,
             @NotNull String[] args) {
         if (args.length == 1) {
-            return List.copyOf(subCommands.keySet());
+            List<String> commandNames = new ArrayList<>();
+            for (String commandName : subCommands.keySet()) {
+                // Check if the sender has the permission to execute the command
+                if (!(sender.hasPermission("economy." + commandName) || sender.hasPermission("economy.*")))
+                    continue;
+                // Check if the command name starts with the argument
+                if (!(args.length == 0 || commandName.startsWith(args[0])))
+                    continue;
+
+                commandNames.add(commandName);
+            }
+
+            return commandNames;
         }
 
         EconomyCommandExecutor executor = subCommands.get(args[0]);
