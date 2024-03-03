@@ -23,11 +23,11 @@ permissions:
   economy.*:
     children:
       economy.balance: true
+      economy.balancetop: true
       economy.pay: true
       economy.set: true
       economy.add: true
       economy.remove: true
-      economy.top: true
     default: op
   economy.balance:
     default: true
