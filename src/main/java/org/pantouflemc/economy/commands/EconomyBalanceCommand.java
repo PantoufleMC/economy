@@ -20,30 +20,31 @@ public class EconomyBalanceCommand extends EconomyCommandExecutor {
             return false;
         }
 
+        // Check if the sender is a player
+        if (!(sender instanceof Player)) {
+            return false;
+        }
+
+        // Check if the command has no arguments
+        if (args.length != 0) {
+            return false;
+        }
+
+        // Get the player
+        Player player = (Player) sender;
+
+        // Get the balance of the player
+        @NotNull
+        double balance;
         try {
-            // Check if the sender is a player
-            if (!(sender instanceof Player)) {
-                return false;
-            }
-
-            // Check if the command has no arguments
-            if (args.length != 0) {
-                return false;
-            }
-
-            // Get the player
-            Player player = (Player) sender;
-
-            // Get the balance of the player
-            double balance = Economy.getPlugin().getBalance(player);
-
-            player.sendMessage("Your balance is $" + balance);
-
-            return true;
+            balance = Economy.getPlugin().getBalance(player);
         } catch (Exception e) {
             sender.sendMessage("An error occurred");
             return false;
         }
+
+        player.sendMessage("Your balance is $" + balance);
+        return true;
     }
 
 }
