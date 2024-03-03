@@ -65,13 +65,17 @@ public final class Economy extends JavaPlugin implements Listener {
         var economyRemoveCommand = new EconomyRemoveCommand();
         var economyTopCommand = new EconomyTopCommand();
 
+        economyCommand.registerSubCommand(economyBalanceCommand);
+        economyCommand.registerSubCommand(economyPayCommand);
+        economyCommand.registerSubCommand(economySetCommand);
+        economyCommand.registerSubCommand(economyAddCommand);
+        economyCommand.registerSubCommand(economyRemoveCommand);
+        economyCommand.registerSubCommand(economyTopCommand);
+
         this.registerCommand(economyCommand);
-        this.registerSubCommand(economyBalanceCommand, economyCommand);
-        this.registerSubCommand(economyPayCommand, economyCommand);
-        this.registerSubCommand(economySetCommand, economyCommand);
-        this.registerSubCommand(economyAddCommand, economyCommand);
-        this.registerSubCommand(economyRemoveCommand, economyCommand);
-        this.registerSubCommand(economyTopCommand, economyCommand);
+        this.registerCommand(economyBalanceCommand);
+        this.registerCommand(economyPayCommand);
+        this.registerCommand(economyTopCommand);
     }
 
     @Override
@@ -124,18 +128,6 @@ public final class Economy extends JavaPlugin implements Listener {
      */
     private void registerCommand(@NotNull EconomyCommandExecutor executor) {
         Economy.getPlugin().getCommand(executor.getCommandName()).setExecutor(executor);
-    }
-
-    /**
-     * Register a sub-command to a command.
-     * 
-     * @param executor the executor of the sub-command
-     * @param command  the command to register the sub-command to
-     */
-    private void registerSubCommand(@NotNull EconomyCommandExecutor executor, @NotNull EconomyCommand command) {
-        String commandName = command.getCommandName() + "." + executor.getCommandName();
-        Economy.getPlugin().getCommand(commandName).setExecutor(executor);
-        command.registerSubCommand(executor);
     }
 
     /// The following methods are used to interact with the database.
