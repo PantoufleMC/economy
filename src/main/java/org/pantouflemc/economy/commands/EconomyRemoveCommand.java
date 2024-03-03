@@ -22,6 +22,11 @@ public class EconomyRemoveCommand extends EconomyCommandExecutor {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
             @NotNull String[] args) {
+        if (!sender.hasPermission("economy.remove")) {
+            sender.sendMessage("You don't have permission to use this command");
+            return false;
+        }
+
         try {
             // Parse the arguments
             if (args.length != 2)

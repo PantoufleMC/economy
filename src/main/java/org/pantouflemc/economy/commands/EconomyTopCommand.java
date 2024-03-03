@@ -14,6 +14,11 @@ public class EconomyTopCommand extends EconomyCommandExecutor {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
             @NotNull String[] args) {
+        if (!sender.hasPermission("economy.top")) {
+            sender.sendMessage("You don't have permission to use this command");
+            return false;
+        }
+
         try {
             // Check if the command has no arguments
             if (args.length != 0) {
