@@ -15,12 +15,12 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.pantouflemc.economy.commands.EconomyAddCommand;
 import org.pantouflemc.economy.commands.EconomyBalanceCommand;
+import org.pantouflemc.economy.commands.EconomyBalanceTopCommand;
 import org.pantouflemc.economy.commands.EconomyCommand;
 import org.pantouflemc.economy.commands.EconomyCommandExecutor;
 import org.pantouflemc.economy.commands.EconomyPayCommand;
 import org.pantouflemc.economy.commands.EconomyRemoveCommand;
 import org.pantouflemc.economy.commands.EconomySetCommand;
-import org.pantouflemc.economy.commands.EconomyTopCommand;
 import org.pantouflemc.economy.database.DatabaseManager;
 import org.pantouflemc.economy.exceptions.EconomyAccountNotFoundError;
 import org.pantouflemc.economy.exceptions.EconomyDatabaseError;
@@ -59,23 +59,23 @@ public final class Economy extends JavaPlugin implements Listener {
         // Register commands
         var economyCommand = new EconomyCommand();
         var economyBalanceCommand = new EconomyBalanceCommand();
+        var economyBalanceTopCommand = new EconomyBalanceTopCommand();
         var economyPayCommand = new EconomyPayCommand();
         var economySetCommand = new EconomySetCommand();
         var economyAddCommand = new EconomyAddCommand();
         var economyRemoveCommand = new EconomyRemoveCommand();
-        var economyTopCommand = new EconomyTopCommand();
 
         economyCommand.registerSubCommand(economyBalanceCommand);
+        economyCommand.registerSubCommand(economyBalanceTopCommand);
         economyCommand.registerSubCommand(economyPayCommand);
         economyCommand.registerSubCommand(economySetCommand);
         economyCommand.registerSubCommand(economyAddCommand);
         economyCommand.registerSubCommand(economyRemoveCommand);
-        economyCommand.registerSubCommand(economyTopCommand);
 
         this.registerCommand(economyCommand);
         this.registerCommand(economyBalanceCommand);
+        this.registerCommand(economyBalanceTopCommand);
         this.registerCommand(economyPayCommand);
-        this.registerCommand(economyTopCommand);
     }
 
     @Override

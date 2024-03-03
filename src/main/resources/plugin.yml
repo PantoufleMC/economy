@@ -11,14 +11,14 @@ commands:
     description: Check your balance
     usage: /<command>
     permission: economy.balance
+  balancetop:
+    description: Show the top balances
+    usage: /<command>
+    permission: economy.balancetop
   pay:
     description: Pay another player
     usage: /<command> <player> <amount>
     permission: economy.pay
-  top:
-    description: Show the top players
-    usage: /<command>
-    permission: economy.top
 permissions:
   economy.*:
     children:
@@ -32,6 +32,9 @@ permissions:
   economy.balance:
     default: true
     description: Allows the player to check his balance
+  economy.balancetop:
+    default: true
+    description: Allows the player to see the top balances
   economy.pay:
     default: true
     description: Allows the player to pay another player
@@ -44,6 +47,3 @@ permissions:
   economy.remove:
     default: op
     description: Allows the player to remove money from another player
-  economy.top:
-    default: true
-    description: Allows the player to see the top player balances
